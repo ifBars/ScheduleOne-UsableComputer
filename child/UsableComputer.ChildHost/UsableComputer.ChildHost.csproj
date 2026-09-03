@@ -1,0 +1,46 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\local.build.props" Condition="Exists('..\..\local.build.props')" />
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.1;net6.0</TargetFrameworks>
+    <TargetFramework Condition="'$(Configuration)' == 'Il2cpp'">net6.0</TargetFramework>
+    <TargetFramework Condition="'$(Configuration)' != 'Il2cpp'">netstandard2.1</TargetFramework>
+    <Configurations>Mono;Il2cpp</Configurations>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>UsableComputer.ChildHost</AssemblyName>
+    <RootNamespace>UsableComputer.ChildHost</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <OutputPath>..\..\bin\$(Configuration)\$(TargetFramework)\</OutputPath>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Mono'">
+    <DefineConstants>$(DefineConstants);MONO;MONOMELON</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Il2cpp'">
+    <DefineConstants>$(DefineConstants);IL2CPP;IL2CPPMELON</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Mono'">
+    <Reference Include="0Harmony" HintPath="$(MonoMelonLoaderPath)\0Harmony.dll" Private="false" />
+    <Reference Include="MelonLoader" HintPath="$(MonoMelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(MonoAssembliesPath)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(MonoAssembliesPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.ScreenCaptureModule" HintPath="$(MonoAssembliesPath)\UnityEngine.ScreenCaptureModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(MonoAssembliesPath)\UnityEngine.UIModule.dll" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Il2cpp'">
+    <Reference Include="0Harmony" HintPath="$(Il2CppMelonLoaderPath)\0Harmony.dll" Private="false" />
+    <Reference Include="MelonLoader" HintPath="$(Il2CppMelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="Il2Cppmscorlib" HintPath="$(Il2CppAssembliesPath)\Il2Cppmscorlib.dll" Private="false" />
+    <Reference Include="Il2CppInterop.Runtime" HintPath="$(Il2CppMelonLoaderPath)\Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(Il2CppAssembliesPath)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(Il2CppAssembliesPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.ScreenCaptureModule" HintPath="$(Il2CppAssembliesPath)\UnityEngine.ScreenCaptureModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(Il2CppAssembliesPath)\UnityEngine.UIModule.dll" Private="false" />
+  </ItemGroup>
+</Project>

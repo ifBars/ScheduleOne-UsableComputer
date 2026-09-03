@@ -1,0 +1,60 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\local.build.props" Condition="Exists('..\..\local.build.props')" />
+
+  <PropertyGroup>
+    <TargetFramework Condition="'$(Configuration)' == 'Il2cpp'">net6.0</TargetFramework>
+    <TargetFramework Condition="'$(Configuration)' != 'Il2cpp'">netstandard2.1</TargetFramework>
+    <Configurations>Mono;Il2cpp</Configurations>
+    <Platforms>AnyCPU</Platforms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <RootNamespace>UsableComputer.ManualDesktopAppSample</RootNamespace>
+    <AssemblyName Condition="'$(Configuration)' == 'Il2cpp'">UsableComputer_ManualDesktopAppSample_Il2cpp</AssemblyName>
+    <AssemblyName Condition="'$(Configuration)' != 'Il2cpp'">UsableComputer_ManualDesktopAppSample_Mono</AssemblyName>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Mono'">
+    <DefineConstants>$(DefineConstants);MONO;MONOMELON</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Il2cpp'">
+    <DefineConstants>$(DefineConstants);IL2CPP;IL2CPPMELON</DefineConstants>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="ManualDesktopAppSample.cs" />
+    <ProjectReference Include="..\..\UsableComputer.csproj" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Mono'">
+    <Reference Include="MelonLoader" HintPath="$(MonoMelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(MonoAssembliesPath)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(MonoAssembliesPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.TextRenderingModule" HintPath="$(MonoAssembliesPath)\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(MonoAssembliesPath)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(MonoAssembliesPath)\UnityEngine.UIModule.dll" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Il2cpp'">
+    <Reference Include="MelonLoader" HintPath="$(Il2CppMelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="Il2Cppmscorlib" HintPath="$(Il2CppAssembliesPath)\Il2Cppmscorlib.dll" Private="false" />
+    <Reference Include="Il2CppInterop.Runtime" HintPath="$(Il2CppMelonLoaderPath)\Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(Il2CppAssembliesPath)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(Il2CppAssembliesPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.TextRenderingModule" HintPath="$(Il2CppAssembliesPath)\UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(Il2CppAssembliesPath)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(Il2CppAssembliesPath)\UnityEngine.UIModule.dll" Private="false" />
+  </ItemGroup>
+
+  <Target Name="ValidateBuildPaths" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(Configuration)' != 'Mono' and '$(Configuration)' != 'Il2cpp'"
+           Text="Build the sample with Configuration=Mono or Configuration=Il2cpp." />
+    <Error Condition="'$(Configuration)' == 'Mono' and (!Exists('$(MonoAssembliesPath)\UnityEngine.dll') or !Exists('$(MonoMelonLoaderPath)\MelonLoader.dll'))"
+           Text="Configure MonoAssembliesPath and MonoMelonLoaderPath in local.build.props." />
+    <Error Condition="'$(Configuration)' == 'Il2cpp' and (!Exists('$(Il2CppAssembliesPath)\UnityEngine.dll') or !Exists('$(Il2CppMelonLoaderPath)\MelonLoader.dll'))"
+           Text="Configure Il2CppAssembliesPath and Il2CppMelonLoaderPath in local.build.props." />
+  </Target>
+</Project>

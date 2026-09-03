@@ -1,0 +1,115 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="local.build.props" Condition="Exists('local.build.props')" />
+
+  <PropertyGroup>
+    <TargetFrameworks>netstandard2.1;net6.0</TargetFrameworks>
+    <TargetFramework Condition="'$(Configuration)' == 'Il2cpp'">net6.0</TargetFramework>
+    <TargetFramework Condition="'$(Configuration)' != 'Il2cpp'">netstandard2.1</TargetFramework>
+    <Configurations>Mono;Il2cpp</Configurations>
+    <Platforms>AnyCPU</Platforms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <RootNamespace>UsableComputer</RootNamespace>
+    <AssemblyName Condition="'$(Configuration)' == 'Il2cpp'">UsableComputer_Il2cpp</AssemblyName>
+    <AssemblyName Condition="'$(Configuration)' != 'Il2cpp'">UsableComputer_Mono</AssemblyName>
+    <Version>1.0.0</Version>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <CopyLocalLockFileAssemblies>false</CopyLocalLockFileAssemblies>
+    <AutomateLocalDeployment Condition="'$(AutomateLocalDeployment)' == ''">false</AutomateLocalDeployment>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Mono'">
+    <DefineConstants>$(DefineConstants);MONO;MONOMELON</DefineConstants>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Il2cpp'">
+    <DefineConstants>$(DefineConstants);IL2CPP;IL2CPPMELON</DefineConstants>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Remove="tests\**\*.cs" />
+    <Compile Remove="examples\**\*.cs" />
+    <Compile Remove="vendor\**\*.cs" />
+    <Compile Remove="child\**\*.cs" />
+    <PackageReference Include="MoonSharp" Version="2.0.0" GeneratePathProperty="true" />
+    <ProjectReference Include="vendor\ManagedDoom.Core\ManagedDoom.Core.csproj" Private="true" />
+    <ProjectReference Include="child\UsableComputer.ChildHost\UsableComputer.ChildHost.csproj" ReferenceOutputAssembly="false" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <MoonSharpRuntimePath Condition="'$(Configuration)' == 'Mono'">$(NuGetPackageRoot)moonsharp\2.0.0\lib\net40-client\MoonSharp.Interpreter.dll</MoonSharpRuntimePath>
+    <MoonSharpRuntimePath Condition="'$(Configuration)' == 'Il2cpp'">$(NuGetPackageRoot)moonsharp\2.0.0\lib\netstandard1.6\MoonSharp.Interpreter.dll</MoonSharpRuntimePath>
+  </PropertyGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Mono'">
+    <Reference Include="Assembly-CSharp" HintPath="$(MonoAssembliesPath)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="FishNet.Runtime" HintPath="$(MonoAssembliesPath)\FishNet.Runtime.dll" Private="false" />
+    <Reference Include="MelonLoader" HintPath="$(MonoMelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="S1API" HintPath="$(S1ApiMonoPath)" Private="false" />
+    <Reference Include="ScheduleOne.Core" HintPath="$(MonoAssembliesPath)\ScheduleOne.Core.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(MonoAssembliesPath)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(MonoAssembliesPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="$(MonoAssembliesPath)\UnityEngine.PhysicsModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(MonoAssembliesPath)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(MonoAssembliesPath)\UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="Unity.InputSystem" HintPath="$(MonoAssembliesPath)\Unity.InputSystem.dll" Private="false" />
+    <Reference Include="Unity.TextMeshPro" HintPath="$(MonoAssembliesPath)\Unity.TextMeshPro.dll" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Il2cpp'">
+    <Reference Include="Assembly-CSharp" HintPath="$(Il2CppAssembliesPath)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="MelonLoader" HintPath="$(Il2CppMelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="S1API" HintPath="$(S1ApiIl2CppPath)" Private="false" />
+    <Reference Include="Il2CppScheduleOne.Core" HintPath="$(Il2CppAssembliesPath)\Il2CppScheduleOne.Core.dll" Private="false" />
+    <Reference Include="Il2CppFishNet.Runtime" HintPath="$(Il2CppAssembliesPath)\Il2CppFishNet.Runtime.dll" Private="false" />
+    <Reference Include="Il2Cppmscorlib" HintPath="$(Il2CppAssembliesPath)\Il2Cppmscorlib.dll" Private="false" />
+    <Reference Include="Il2CppInterop.Runtime" HintPath="$(Il2CppMelonLoaderPath)\Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(Il2CppAssembliesPath)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(Il2CppAssembliesPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="$(Il2CppAssembliesPath)\UnityEngine.PhysicsModule.dll" Private="false" />
+    <Reference Include="UnityEngine.UI" HintPath="$(Il2CppAssembliesPath)\UnityEngine.UI.dll" Private="false" />
+    <Reference Include="UnityEngine.UIModule" HintPath="$(Il2CppAssembliesPath)\UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="Unity.InputSystem" HintPath="$(Il2CppAssembliesPath)\Unity.InputSystem.dll" Private="false" />
+    <Reference Include="Unity.TextMeshPro" HintPath="$(Il2CppAssembliesPath)\Unity.TextMeshPro.dll" Private="false" />
+  </ItemGroup>
+
+  <Target Name="ValidateBuildPaths" BeforeTargets="ResolveReferences">
+    <Error Condition="'$(Configuration)' != 'Mono' and '$(Configuration)' != 'Il2cpp'"
+           Text="Build UsableComputer with Configuration=Mono or Configuration=Il2cpp." />
+    <Error Condition="'$(Configuration)' == 'Mono' and (!Exists('$(MonoAssembliesPath)\Assembly-CSharp.dll') or !Exists('$(MonoMelonLoaderPath)\MelonLoader.dll'))"
+           Text="Configure MonoAssembliesPath and MonoMelonLoaderPath in local.build.props." />
+    <Error Condition="'$(Configuration)' == 'Il2cpp' and (!Exists('$(Il2CppAssembliesPath)\Assembly-CSharp.dll') or !Exists('$(Il2CppMelonLoaderPath)\MelonLoader.dll'))"
+           Text="Configure Il2CppAssembliesPath and Il2CppMelonLoaderPath in local.build.props." />
+    <Error Condition="'$(Configuration)' == 'Mono' and !Exists('$(S1ApiMonoPath)')"
+           Text="Configure S1ApiMonoPath to a built Mono S1API.dll." />
+    <Error Condition="'$(Configuration)' == 'Il2cpp' and !Exists('$(S1ApiIl2CppPath)')"
+           Text="Configure S1ApiIl2CppPath to a built IL2CPP S1API.dll." />
+  </Target>
+
+  <Target Name="CopyMoonSharpRuntime" AfterTargets="Build">
+    <Error Condition="!Exists('$(MoonSharpRuntimePath)')"
+           Text="MoonSharp runtime was not found at $(MoonSharpRuntimePath). Restore NuGet packages before building." />
+    <Copy SourceFiles="$(MoonSharpRuntimePath)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="DeployMono" AfterTargets="Build" DependsOnTargets="CopyMoonSharpRuntime"
+          Condition="'$(AutomateLocalDeployment)' == 'true' and '$(Configuration)' == 'Mono' and '$(LocalMonoDeploymentPath)' != ''">
+    <MakeDir Directories="$(LocalMonoDeploymentPath)\Mods;$(LocalMonoDeploymentPath)\UserLibs" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(LocalMonoDeploymentPath)\Mods" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MoonSharpRuntimePath)" DestinationFolder="$(LocalMonoDeploymentPath)\UserLibs" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)ManagedDoom.Core.dll" DestinationFolder="$(LocalMonoDeploymentPath)\UserLibs" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)UsableComputer.ChildHost.dll" DestinationFolder="$(LocalMonoDeploymentPath)\UserLibs" SkipUnchangedFiles="true" />
+  </Target>
+
+  <Target Name="DeployIl2cpp" AfterTargets="Build" DependsOnTargets="CopyMoonSharpRuntime"
+          Condition="'$(AutomateLocalDeployment)' == 'true' and '$(Configuration)' == 'Il2cpp' and '$(LocalIl2CppDeploymentPath)' != ''">
+    <MakeDir Directories="$(LocalIl2CppDeploymentPath)\Mods;$(LocalIl2CppDeploymentPath)\UserLibs" />
+    <Copy SourceFiles="$(TargetPath)" DestinationFolder="$(LocalIl2CppDeploymentPath)\Mods" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(MoonSharpRuntimePath)" DestinationFolder="$(LocalIl2CppDeploymentPath)\UserLibs" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)ManagedDoom.Core.dll" DestinationFolder="$(LocalIl2CppDeploymentPath)\UserLibs" SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(TargetDir)UsableComputer.ChildHost.dll" DestinationFolder="$(LocalIl2CppDeploymentPath)\UserLibs" SkipUnchangedFiles="true" />
+  </Target>
+</Project>
