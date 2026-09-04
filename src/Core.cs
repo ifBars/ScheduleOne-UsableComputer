@@ -2,6 +2,7 @@ using MelonLoader;
 using S1API.Building;
 using S1API.Lifecycle;
 using UsableComputer.Content;
+using UsableComputer.FileSystem;
 using UsableComputer.Runtime;
 using UsableComputer.Scripting;
 using UsableComputer.UI;
@@ -24,9 +25,11 @@ public sealed class Core : MelonMod
     public override void OnInitializeMelon()
     {
         PreferencesStore.Initialize();
+        VirtualFileSystemService.Initialize();
         BuiltInDesktopApps.RegisterAll();
         LuaAppManager.Initialize();
         GameLifecycle.OnPreLoad += ComputerContentRegistrar.Register;
+        GameLifecycle.OnPreLoad += VirtualFileSystemService.PrepareForLoad;
         GameLifecycle.OnLoadComplete += ComputerContentRegistrar.AddToShops;
         GameLifecycle.OnPreSceneChange += UsableComputerRuntime.DisposeAll;
         BuildEvents.OnBuildableItemInitialized += UsableComputerRuntime.Attach;
@@ -69,6 +72,7 @@ public sealed class Core : MelonMod
         if (_subscribed)
         {
             GameLifecycle.OnPreLoad -= ComputerContentRegistrar.Register;
+            GameLifecycle.OnPreLoad -= VirtualFileSystemService.PrepareForLoad;
             GameLifecycle.OnLoadComplete -= ComputerContentRegistrar.AddToShops;
             GameLifecycle.OnPreSceneChange -= UsableComputerRuntime.DisposeAll;
             BuildEvents.OnBuildableItemInitialized -= UsableComputerRuntime.Attach;
@@ -78,5 +82,6 @@ public sealed class Core : MelonMod
         UsableComputerRuntime.DisposeAll();
         LuaAppManager.Shutdown();
         BuiltInDesktopApps.UnregisterAll();
+        VirtualFileSystemService.Shutdown();
     }
 }

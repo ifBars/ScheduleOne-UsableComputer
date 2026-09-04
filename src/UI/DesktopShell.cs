@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using UsableComputer.API;
+using UsableComputer.FileSystem;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -20,6 +21,7 @@ internal sealed class DesktopShell : IDisposable
 {
     private readonly Action _onPowerRequested;
     private readonly Action _onRegistryChanged;
+    private readonly Action _onFileSystemChanged;
     private readonly Action<DesktopAppearance, DesktopAppearance> _onAppearanceChanged;
     private readonly UiListenerRegistry _listeners = new();
     private UiListenerRegistry _surfaceListeners = new();
@@ -41,6 +43,7 @@ internal sealed class DesktopShell : IDisposable
     {
         _onPowerRequested = onPowerRequested;
         _onRegistryChanged = RefreshAppSurfaces;
+        _onFileSystemChanged = RefreshAppSurfaces;
         _onAppearanceChanged = ApplyAppearance;
 
         _root = new GameObject(Constants.CanvasName);
@@ -120,11 +123,12 @@ internal sealed class DesktopShell : IDisposable
         _clock.rectTransform.sizeDelta = new Vector2(84f, -8f);
         _clock.rectTransform.anchoredPosition = new Vector2(-8f, 0f);
 
-        _windows = new WindowManager(windowLayer, taskbarApps, eventCamera);
+        _windows = new WindowManager(windowLayer, taskbarApps, eventCamera, OpenApp);
         _listeners.Add(ToggleStartMenu, startButton.onClick);
         RefreshAppSurfaces();
 
         DesktopAppRegistry.Changed += _onRegistryChanged;
+        VirtualFileSystemService.Changed += _onFileSystemChanged;
         PreferencesStore.AppearanceChanged += _onAppearanceChanged;
         _registrySubscribed = true;
         UiFactory.SetLayerRecursively(_root, Constants.UiLayer);
@@ -181,6 +185,7 @@ internal sealed class DesktopShell : IDisposable
         if (_registrySubscribed)
         {
             DesktopAppRegistry.Changed -= _onRegistryChanged;
+            VirtualFileSystemService.Changed -= _onFileSystemChanged;
             PreferencesStore.AppearanceChanged -= _onAppearanceChanged;
             _registrySubscribed = false;
         }
@@ -212,9 +217,13 @@ internal sealed class DesktopShell : IDisposable
             {
                 _refreshPending = false;
                 IReadOnlyList<DesktopAppDescriptor> descriptors = DesktopAppRegistry.GetAll();
+                var descriptorsById = new Dictionary<string, DesktopAppDescriptor>(StringComparer.Ordinal);
                 var registeredIds = new HashSet<string>(StringComparer.Ordinal);
                 foreach (DesktopAppDescriptor descriptor in descriptors)
+                {
                     registeredIds.Add(descriptor.Id);
+                    descriptorsById.Add(descriptor.Id, descriptor);
+                }
 
                 IReadOnlyList<string> openAppIds = _windows.GetAppIds();
                 foreach (string appId in openAppIds)
@@ -231,17 +240,21 @@ internal sealed class DesktopShell : IDisposable
                     ?? throw new InvalidOperationException("Desktop icon root was not created.");
 
                 int desktopIndex = 0;
-                for (int index = 0; index < descriptors.Count; index++)
+                IReadOnlyList<VirtualFileSystemNode> desktopNodes =
+                    VirtualFileSystemService.GetChildren(VirtualFileSystem.DesktopId);
+                for (int index = 0; index < desktopNodes.Count; index++)
                 {
-                    DesktopAppDescriptor descriptor = descriptors[index];
-                    if (string.Equals(descriptor.Id, Constants.SettingsAppId, StringComparison.Ordinal))
-                        continue;
-                    string appId = descriptor.Id;
+                    VirtualFileSystemNode node = desktopNodes[index];
+                    DesktopAppDescriptor? descriptor = null;
+                    if (!string.IsNullOrEmpty(node.TargetId))
+                        descriptorsById.TryGetValue(node.TargetId, out descriptor);
+                    string nodeId = node.Id;
                     CreateDesktopIcon(
                         desktopIconsRoot.transform,
+                        node,
                         descriptor,
                         GetIconPosition(desktopIndex++),
-                        () => OpenApp(appId));
+                        () => OpenNode(nodeId));
                 }
 
                 if (_startMenu != null)
@@ -284,6 +297,31 @@ internal sealed class DesktopShell : IDisposable
             MelonLoader.MelonLogger.Error(
                 $"[{Constants.ModName}] Could not open desktop app '{appId}': {exception}");
         }
+    }
+
+    private void OpenNode(string nodeId)
+    {
+        if (!VirtualFileSystemService.TryGetNode(nodeId, out VirtualFileSystemNode node))
+            return;
+        if (node.Kind == VirtualFileSystemNodeKind.Directory)
+        {
+            OpenFolder(node.Id);
+            return;
+        }
+        if (string.IsNullOrEmpty(node.TargetId) || !DesktopAppRegistry.TryGet(node.TargetId, out _))
+        {
+            MelonLoader.MelonLogger.Warning(
+                $"[{Constants.ModName}] Desktop shortcut '{node.Name}' targets an unavailable app '{node.TargetId}'.");
+            return;
+        }
+
+        OpenApp(node.TargetId);
+    }
+
+    private void OpenFolder(string directoryId)
+    {
+        OpenApp(Constants.FilesAppId);
+        _windows.OpenDirectory(Constants.FilesAppId, directoryId);
     }
 
     private GameObject BuildStartMenu(IReadOnlyList<DesktopAppDescriptor> descriptors)
@@ -411,13 +449,14 @@ internal sealed class DesktopShell : IDisposable
 
     private void CreateDesktopIcon(
         Transform parent,
-        DesktopAppDescriptor descriptor,
+        VirtualFileSystemNode node,
+        DesktopAppDescriptor? descriptor,
         Vector2 position,
         Action action)
     {
         GameObject iconObject = UiFactory.CreatePanel(
             parent,
-            $"DesktopIcon_{descriptor.Id}",
+            $"DesktopIcon_{node.Id}",
             Color.clear);
         RectTransform iconRect = iconObject.GetComponent<RectTransform>();
         iconRect.anchorMin = new Vector2(0f, 1f);
@@ -448,7 +487,11 @@ internal sealed class DesktopShell : IDisposable
         iconFrameRect.sizeDelta = new Vector2(42f, 42f);
         iconFrameRect.anchoredPosition = new Vector2(0f, -4f);
 
-        Sprite icon = RuntimeAppIcons.Resolve(descriptor);
+        Sprite icon = node.Kind == VirtualFileSystemNodeKind.Directory
+            ? RuntimeAppIcons.Get(BuiltInIcon.Folder)
+            : descriptor != null
+                ? RuntimeAppIcons.Resolve(descriptor)
+                : RuntimeAppIcons.Get(BuiltInIcon.Generic);
 
         Image iconBackground = iconFrame.GetComponent<Image>();
         iconBackground.color = Color.clear;
@@ -466,7 +509,9 @@ internal sealed class DesktopShell : IDisposable
         S1Text caption = UiFactory.CreateText(
             iconObject.transform,
             "Caption",
-            descriptor.Title,
+            descriptor == null && node.Kind == VirtualFileSystemNodeKind.AppShortcut
+                ? node.Name + " (?)"
+                : node.Name,
             12f,
             UiFactory.TextOnAccent,
             GetCenterAlignment(),
