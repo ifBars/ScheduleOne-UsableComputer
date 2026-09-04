@@ -14,6 +14,8 @@ var tests = new (string Name, Action Test)[]
     ("non-empty folders cannot be deleted", TestNonEmptyDelete),
     ("snapshot round trip preserves unavailable shortcuts", TestSnapshotRoundTrip),
     ("invalid snapshots are rejected", TestInvalidSnapshot),
+    ("persisted names and shortcut targets remain canonical", TestCanonicalSnapshotValues),
+    ("shortcut reconciliation tolerates a full filesystem", TestShortcutCapacity),
 };
 
 foreach ((string name, Action test) in tests)
@@ -146,6 +148,54 @@ static void TestInvalidSnapshot()
         Kind = VirtualFileSystemNodeKind.Directory,
     });
     AssertThrows<InvalidOperationException>(() => new VirtualFileSystem(snapshot), "orphaned nodes should be rejected");
+}
+
+static void TestCanonicalSnapshotValues()
+{
+    VirtualFileSystemSnapshot paddedName = VirtualFileSystem.CreateFreshSnapshot();
+    paddedName.Nodes.Add(new VirtualFileSystemNode
+    {
+        Id = "padded",
+        ParentId = VirtualFileSystem.DesktopId,
+        Name = " Work ",
+        Kind = VirtualFileSystemNodeKind.Directory,
+    });
+    AssertThrows<InvalidOperationException>(
+        () => new VirtualFileSystem(paddedName),
+        "persisted names with surrounding whitespace should be rejected");
+
+    VirtualFileSystemSnapshot oversizedTarget = VirtualFileSystem.CreateFreshSnapshot();
+    oversizedTarget.Nodes.Add(new VirtualFileSystemNode
+    {
+        Id = "shortcut",
+        ParentId = VirtualFileSystem.DesktopId,
+        Name = "App",
+        Kind = VirtualFileSystemNodeKind.AppShortcut,
+        TargetId = new string('a', 129),
+    });
+    AssertThrows<InvalidOperationException>(
+        () => new VirtualFileSystem(oversizedTarget),
+        "persisted shortcut targets should enforce the runtime length limit");
+}
+
+static void TestShortcutCapacity()
+{
+    VirtualFileSystemSnapshot snapshot = VirtualFileSystem.CreateFreshSnapshot();
+    for (int index = snapshot.Nodes.Count; index < VirtualFileSystem.MaximumNodeCount; index++)
+    {
+        snapshot.Nodes.Add(new VirtualFileSystemNode
+        {
+            Id = $"node-{index}",
+            ParentId = VirtualFileSystem.DesktopId,
+            Name = $"Node {index}",
+            Kind = VirtualFileSystemNodeKind.Directory,
+        });
+    }
+
+    var fileSystem = new VirtualFileSystem(snapshot);
+    Assert(!fileSystem.EnsureAppShortcut("notes", "Notes"), "a full filesystem should skip a new app shortcut");
+    Assert(fileSystem.GetChildren(VirtualFileSystem.DesktopId).Count == VirtualFileSystem.MaximumNodeCount - 2,
+        "capacity handling should preserve the loaded snapshot");
 }
 
 static TException AssertThrows<TException>(Action action, string message)

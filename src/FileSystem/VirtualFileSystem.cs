@@ -81,7 +81,8 @@ internal sealed class VirtualFileSystem
             return false;
         }
 
-        EnsureCapacity();
+        if (_nodes.Count >= MaximumNodeCount)
+            return false;
         string safeTitle = MakeSafeName(title, "Untitled app");
         safeTitle = MakeUniqueName(DesktopId, safeTitle);
         var node = new VirtualFileSystemNode
@@ -201,9 +202,14 @@ internal sealed class VirtualFileSystem
                 throw new InvalidOperationException($"The virtual filesystem contains duplicate node id '{node.Id}'.");
             if (!Enum.IsDefined(typeof(VirtualFileSystemNodeKind), node.Kind))
                 throw new InvalidOperationException($"Virtual filesystem node '{node.Id}' has an unsupported kind.");
-            NormalizeName(node.Name);
-            if (node.Kind == VirtualFileSystemNodeKind.AppShortcut && string.IsNullOrWhiteSpace(node.TargetId))
-                throw new InvalidOperationException($"App shortcut '{node.Id}' has no target id.");
+            string normalizedName = NormalizeName(node.Name);
+            if (!string.Equals(node.Name, normalizedName, StringComparison.Ordinal))
+                throw new InvalidOperationException($"Virtual filesystem node '{node.Id}' has a non-canonical name.");
+            if (node.Kind == VirtualFileSystemNodeKind.AppShortcut &&
+                (string.IsNullOrWhiteSpace(node.TargetId) || node.TargetId.Length > 128))
+            {
+                throw new InvalidOperationException($"App shortcut '{node.Id}' has an invalid target id.");
+            }
             if (node.Kind == VirtualFileSystemNodeKind.Directory && node.TargetId != null)
                 throw new InvalidOperationException($"Directory '{node.Id}' cannot have an app target.");
         }
