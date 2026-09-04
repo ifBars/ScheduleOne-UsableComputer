@@ -287,6 +287,20 @@ public sealed class Core : MelonMod
             args: new object[] { _screenAnchor.transform, camera, new Action(() => { }) },
             culture: null) ?? throw new InvalidOperationException("DesktopShell could not be created.");
         shellType.GetMethod("Show", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(shell, null);
+        GameObject desktopRoot = (GameObject)(shellType
+            .GetField("_root", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .GetValue(shell) ?? throw new InvalidOperationException("Desktop root was not created."));
+        bool hasNativeScheduleOneLogo = false;
+        foreach (UnityEngine.UI.Image image in desktopRoot.GetComponentsInChildren<UnityEngine.UI.Image>(true))
+        {
+            if (image.sprite != null &&
+                string.Equals(image.sprite.name, "S1 Logo Whiteout small", StringComparison.Ordinal))
+            {
+                hasNativeScheduleOneLogo = true;
+                break;
+            }
+        }
+        Require(hasNativeScheduleOneLogo, "The desktop did not use the game-owned Schedule I logo sprite.");
         shellType.GetMethod("OpenFolder", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(shell, new object[] { folderId });
         _desktop = (IDisposable)shell;
     }
