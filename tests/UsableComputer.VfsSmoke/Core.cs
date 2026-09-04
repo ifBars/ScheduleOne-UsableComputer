@@ -5,19 +5,24 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 #if IL2CPP
+using Il2CppInterop.Runtime;
+using S1BuildableDefinition = Il2CppScheduleOne.ItemFramework.BuildableItemDefinition;
 using S1DateTime = Il2CppSystem.DateTime;
 using S1DateTimeData = Il2CppScheduleOne.Persistence.Datas.DateTimeData;
 using S1LoadManager = Il2CppScheduleOne.Persistence.LoadManager;
 using S1MetaData = Il2CppScheduleOne.Persistence.Datas.MetaData;
 using S1SaveInfo = Il2CppScheduleOne.Persistence.SaveInfo;
 using S1SaveManager = Il2CppScheduleOne.Persistence.SaveManager;
+using S1Registry = Il2CppScheduleOne.Registry;
 #else
+using S1BuildableDefinition = ScheduleOne.ItemFramework.BuildableItemDefinition;
 using S1DateTime = System.DateTime;
 using S1DateTimeData = ScheduleOne.Persistence.Datas.DateTimeData;
 using S1LoadManager = ScheduleOne.Persistence.LoadManager;
 using S1MetaData = ScheduleOne.Persistence.Datas.MetaData;
 using S1SaveInfo = ScheduleOne.Persistence.SaveInfo;
 using S1SaveManager = ScheduleOne.Persistence.SaveManager;
+using S1Registry = ScheduleOne.Registry;
 #endif
 
 [assembly: MelonInfo(
@@ -42,6 +47,7 @@ public sealed class Core : MelonMod
     private string _savePath = string.Empty;
     private IDisposable? _desktop;
     private GameObject? _screenAnchor;
+    private GameObject? _computerModel;
 
     public override void OnInitializeMelon()
     {
@@ -77,8 +83,9 @@ public sealed class Core : MelonMod
     {
         _desktop?.Dispose();
         _desktop = null;
-        if (_screenAnchor != null)
-            UnityEngine.Object.Destroy(_screenAnchor);
+        if (_computerModel != null)
+            UnityEngine.Object.Destroy(_computerModel);
+        _computerModel = null;
         _screenAnchor = null;
     }
 
@@ -258,12 +265,21 @@ public sealed class Core : MelonMod
         Assembly assembly = GetUsableComputerAssembly();
         Type shellType = assembly.GetType("UsableComputer.UI.DesktopShell", throwOnError: true)!;
         Camera camera = Camera.main!;
-        _screenAnchor = new GameObject("UsableComputerVfsSmokeScreen");
-        _screenAnchor.transform.SetParent(camera.transform, false);
-        // Frame the synthetic desktop tightly enough for review evidence while
-        // preserving the production world-space scale and render path.
-        _screenAnchor.transform.localPosition = new Vector3(0f, 0f, 0.25f);
-        _screenAnchor.transform.localRotation = Quaternion.identity;
+        _computerModel = CreateComputerModel(assembly);
+        Transform cameraAnchor = FindDescendant(_computerModel.transform, "UsableComputer_CameraAnchor")
+            ?? throw new InvalidOperationException("The fixture computer is missing its camera anchor.");
+        _screenAnchor = FindDescendant(_computerModel.transform, "UsableComputer_ScreenAnchor")?.gameObject
+            ?? throw new InvalidOperationException("The fixture computer is missing its screen anchor.");
+
+        // Put the physical model at the production viewing pose relative to the
+        // current gameplay camera. The screenshot therefore includes the CRT,
+        // keyboard, room, and HUD—not a camera-mounted replacement canvas.
+        _computerModel.transform.rotation = camera.transform.rotation * Quaternion.Inverse(cameraAnchor.localRotation);
+        _computerModel.transform.position = camera.transform.position -
+            (_computerModel.transform.rotation * cameraAnchor.localPosition) -
+            (camera.transform.forward * 0.16f);
+        _computerModel.SetActive(true);
+        camera.fieldOfView = 55f;
         object shell = Activator.CreateInstance(
             shellType,
             BindingFlags.Instance | BindingFlags.NonPublic,
@@ -273,6 +289,39 @@ public sealed class Core : MelonMod
         shellType.GetMethod("Show", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(shell, null);
         shellType.GetMethod("OpenFolder", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(shell, new object[] { folderId });
         _desktop = (IDisposable)shell;
+    }
+
+    private static GameObject CreateComputerModel(Assembly assembly)
+    {
+        object donorItem = S1Registry.GetItem("launderingstation")
+            ?? throw new InvalidOperationException("The laundering station donor is unavailable.");
+#if IL2CPP
+        S1BuildableDefinition donor = ((Il2CppSystem.Object)donorItem).TryCast<S1BuildableDefinition>()
+            ?? throw new InvalidOperationException("The laundering station donor is not buildable.");
+#else
+        S1BuildableDefinition donor = donorItem as S1BuildableDefinition
+            ?? throw new InvalidOperationException("The laundering station donor is not buildable.");
+#endif
+        GameObject donorObject = donor.BuiltItem.gameObject;
+
+        Type factoryType = assembly.GetType("UsableComputer.Content.NativeComputerModelFactory", throwOnError: true)!;
+        MethodInfo create = factoryType.GetMethod("Create", BindingFlags.Static | BindingFlags.NonPublic)!;
+        return (GameObject)(create.Invoke(null, new object[] { donorObject })
+            ?? throw new InvalidOperationException("The physical computer model could not be created."));
+    }
+
+    private static Transform? FindDescendant(Transform root, string name)
+    {
+        if (root.name == name)
+            return root;
+        for (int index = 0; index < root.childCount; index++)
+        {
+            Transform child = root.GetChild(index);
+            Transform? match = FindDescendant(child, name);
+            if (match != null)
+                return match;
+        }
+        return null;
     }
 
     private static object GetServiceType()
