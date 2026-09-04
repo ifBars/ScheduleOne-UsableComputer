@@ -14,6 +14,7 @@ public sealed class DesktopAppContext
     private readonly UiListenerRegistry _listeners;
     private readonly List<Action> _cleanupActions = new();
     private readonly Action _requestClose;
+    private readonly Action<string> _requestOpenApp;
     private readonly Action<bool> _setTyping;
     private bool _disposed;
 
@@ -23,6 +24,7 @@ public sealed class DesktopAppContext
         Camera? eventCamera,
         UiListenerRegistry listeners,
         Action requestClose,
+        Action<string> requestOpenApp,
         Action<bool> setTyping)
     {
         Container = container ?? throw new ArgumentNullException(nameof(container));
@@ -30,6 +32,7 @@ public sealed class DesktopAppContext
         EventCamera = eventCamera;
         _listeners = listeners ?? throw new ArgumentNullException(nameof(listeners));
         _requestClose = requestClose ?? throw new ArgumentNullException(nameof(requestClose));
+        _requestOpenApp = requestOpenApp ?? throw new ArgumentNullException(nameof(requestOpenApp));
         _setTyping = setTyping ?? throw new ArgumentNullException(nameof(setTyping));
     }
 
@@ -82,6 +85,18 @@ public sealed class DesktopAppContext
             return;
 
         _requestClose();
+    }
+
+    /// <summary>
+    /// Opens or focuses another registered desktop app in the same Usable Computer.
+    /// </summary>
+    public void OpenApp(string appId)
+    {
+        ThrowIfDisposed();
+        if (string.IsNullOrWhiteSpace(appId))
+            throw new ArgumentException("An app id is required.", nameof(appId));
+
+        _requestOpenApp(appId);
     }
 
     public void SetTyping(bool typing)

@@ -11,6 +11,7 @@ internal static class BuiltInDesktopApps
     private static readonly string[] AppIds =
     {
         Constants.NotesAppId,
+        Constants.FilesAppId,
         Constants.CalculatorAppId,
         Constants.AboutAppId,
         Constants.JournalAppId,
@@ -32,6 +33,15 @@ internal static class BuiltInDesktopApps
                 new Vector2(-90f, 24f),
                 context => new NotesApp(context),
                 () => RuntimeAppIcons.Get(BuiltInIcon.Notes)));
+        Register(
+            new DesktopAppDescriptor(
+                Constants.FilesAppId,
+                "Files",
+                string.Empty,
+                new Vector2(700f, 470f),
+                Vector2.zero,
+                context => new FileExplorerApp(context),
+                () => RuntimeAppIcons.Get(BuiltInIcon.Folder)));
         Register(
             new DesktopAppDescriptor(
                 Constants.CalculatorAppId,

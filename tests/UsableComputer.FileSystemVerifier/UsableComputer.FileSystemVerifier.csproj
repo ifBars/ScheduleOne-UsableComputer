@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
+    <Compile Include="Program.cs" />
+    <Compile Include="..\..\src\FileSystem\VirtualFileSystem.cs" Link="VirtualFileSystem.cs" />
+    <Compile Include="..\..\src\FileSystem\VirtualFileSystemNode.cs" Link="VirtualFileSystemNode.cs" />
+    <Compile Include="..\..\src\FileSystem\VirtualFileSystemNodeKind.cs" Link="VirtualFileSystemNodeKind.cs" />
+    <Compile Include="..\..\src\FileSystem\VirtualFileSystemSnapshot.cs" Link="VirtualFileSystemSnapshot.cs" />
+  </ItemGroup>
+</Project>

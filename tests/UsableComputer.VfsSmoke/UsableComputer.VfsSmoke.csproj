@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\local.build.props" Condition="Exists('..\..\local.build.props')" />
+
+  <PropertyGroup>
+    <Configurations>Mono;Il2cpp</Configurations>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>UsableComputer.VfsSmoke</AssemblyName>
+    <RootNamespace>UsableComputer.VfsSmoke</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Mono'">
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <DefineConstants>MONO</DefineConstants>
+    <ManagedPath>$(MonoAssembliesPath)</ManagedPath>
+    <MelonLoaderPath>$(MonoMelonLoaderPath)</MelonLoaderPath>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(Configuration)' == 'Il2cpp'">
+    <TargetFramework>net6.0</TargetFramework>
+    <DefineConstants>IL2CPP</DefineConstants>
+    <ManagedPath>$(Il2CppAssembliesPath)</ManagedPath>
+    <MelonLoaderPath>$(Il2CppMelonLoaderPath)</MelonLoaderPath>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader" HintPath="$(MelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="Assembly-CSharp" HintPath="$(ManagedPath)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.ScreenCaptureModule" HintPath="$(ManagedPath)\UnityEngine.ScreenCaptureModule.dll" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Mono'">
+    <Reference Include="ScheduleOne.Core" HintPath="$(ManagedPath)\ScheduleOne.Core.dll" Private="false" />
+  </ItemGroup>
+
+  <ItemGroup Condition="'$(Configuration)' == 'Il2cpp'">
+    <Reference Include="Il2CppScheduleOne.Core" HintPath="$(ManagedPath)\Il2CppScheduleOne.Core.dll" Private="false" />
+    <Reference Include="Il2CppInterop.Runtime" HintPath="$(MelonLoaderPath)\Il2CppInterop.Runtime.dll" Private="false" />
+    <Reference Include="Il2Cppmscorlib" HintPath="$(ManagedPath)\Il2Cppmscorlib.dll" Private="false" />
+  </ItemGroup>
+</Project>

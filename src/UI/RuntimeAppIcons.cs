@@ -8,6 +8,7 @@ namespace UsableComputer.UI;
 internal enum BuiltInIcon
 {
     Notes,
+    Folder,
     Calculator,
     About,
     Studio,
@@ -86,6 +87,9 @@ internal static class RuntimeAppIcons
             case BuiltInIcon.Notes:
                 DrawNotes(pixels);
                 break;
+            case BuiltInIcon.Folder:
+                DrawFolder(pixels);
+                break;
             case BuiltInIcon.Calculator:
                 DrawCalculator(pixels);
                 break;
@@ -123,6 +127,14 @@ internal static class RuntimeAppIcons
         DrawRect(pixels, 18, 45, 21, 3, new Color32(77, 126, 190, 255));
         for (int x = 17; x <= 49; x += 8)
             DrawRect(pixels, x, 54, 4, 6, new Color32(70, 70, 74, 255));
+    }
+
+    private static void DrawFolder(Color32[] pixels)
+    {
+        DrawRect(pixels, 7, 12, 25, 10, new Color32(224, 166, 34, 255));
+        DrawRect(pixels, 5, 18, 54, 38, new Color32(239, 188, 55, 255));
+        DrawRect(pixels, 8, 24, 48, 28, new Color32(255, 211, 86, 255));
+        DrawLine(pixels, 8, 25, 56, 25, new Color32(255, 231, 140, 255), 2);
     }
 
     private static void DrawCalculator(Color32[] pixels)
