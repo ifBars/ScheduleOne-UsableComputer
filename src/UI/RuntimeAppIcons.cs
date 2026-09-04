@@ -186,13 +186,28 @@ internal static class RuntimeAppIcons
 
     private static void DrawSettings(Color32[] pixels)
     {
-        DrawCircle(pixels, 32, 32, 22, new Color32(96, 111, 132, 255));
-        DrawCircle(pixels, 32, 32, 13, new Color32(211, 218, 226, 255));
-        DrawCircle(pixels, 32, 32, 6, new Color32(56, 79, 112, 255));
-        DrawRect(pixels, 28, 3, 8, 12, new Color32(96, 111, 132, 255));
-        DrawRect(pixels, 28, 49, 8, 12, new Color32(96, 111, 132, 255));
-        DrawRect(pixels, 3, 28, 12, 8, new Color32(96, 111, 132, 255));
-        DrawRect(pixels, 49, 28, 12, 8, new Color32(96, 111, 132, 255));
+        Color32 outline = new(32, 49, 76, 255);
+        Color32 bezel = new(88, 110, 143, 255);
+        Color32 screen = new(225, 238, 247, 255);
+        Color32 track = new(86, 105, 128, 255);
+
+        // A display with color controls reads as "Display Properties" even at taskbar size.
+        DrawRect(pixels, 5, 13, 54, 39, outline);
+        DrawRect(pixels, 8, 16, 48, 33, bezel);
+        DrawRect(pixels, 11, 19, 42, 27, screen);
+        DrawRect(pixels, 11, 41, 42, 5, new Color32(48, 113, 190, 255));
+
+        DrawRect(pixels, 15, 23, 11, 14, new Color32(66, 153, 219, 255));
+        DrawRect(pixels, 15, 23, 11, 5, new Color32(102, 190, 102, 255));
+        DrawRect(pixels, 15, 32, 11, 5, new Color32(241, 186, 66, 255));
+
+        DrawRect(pixels, 31, 25, 17, 2, track);
+        DrawCircle(pixels, 39, 26, 3, new Color32(48, 113, 190, 255));
+        DrawRect(pixels, 31, 32, 17, 2, track);
+        DrawCircle(pixels, 44, 33, 3, new Color32(102, 171, 92, 255));
+
+        DrawRect(pixels, 27, 8, 10, 5, outline);
+        DrawRect(pixels, 20, 5, 24, 4, outline);
     }
 
     private static void DrawDoom(Color32[] pixels)
