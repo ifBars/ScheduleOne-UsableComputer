@@ -24,6 +24,7 @@ internal static class NativeComputerModelFactory
 
         var modelRoot = new GameObject(Constants.ModelRootName);
         modelRoot.SetActive(false);
+        modelRoot.transform.localScale = Vector3.one * DisplayProfile.ModelScale;
 
         try
         {

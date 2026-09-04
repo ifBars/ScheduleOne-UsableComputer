@@ -176,7 +176,7 @@ internal sealed class UsableComputerController : IDisposable
                 _cameraAnchor.rotation,
                 Constants.CameraTransitionSeconds);
             _cameraOverridden = true;
-            _playerCamera.OverrideFOV(65f, Constants.CameraTransitionSeconds);
+            _playerCamera.OverrideFOV(DisplayProfile.InteractionFieldOfView, Constants.CameraTransitionSeconds);
             _fovOverridden = true;
 
             _playerCamera.AddActiveUIElement(_interactionToken);

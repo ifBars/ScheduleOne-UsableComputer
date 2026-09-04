@@ -92,7 +92,8 @@ internal sealed class NestedGameProcess : IDisposable
                     NestedGameProtocol.MappingArgument + " " + Quote(mapName) + " " +
                     NestedGameProtocol.ProfileArgument + " " + Quote(profileDirectory) + " " +
                     NestedGameProtocol.ParentArgument + " " + parentId + " " +
-                    "-screen-width 640 -screen-height 360 -screen-fullscreen 0 -popupwindow",
+                    $"-screen-width {DisplayProfile.NestedWidth} -screen-height {DisplayProfile.NestedHeight} " +
+                    "-screen-fullscreen 0 -popupwindow",
             };
             Process process = Process.Start(startInfo)
                 ?? throw new InvalidOperationException("Windows did not start the nested Schedule I process.");

@@ -33,6 +33,12 @@ The Schedule I app launches a second game process and streams its Unity cameras 
 
 This feature is Windows-only and runs two complete game instances. Expect a meaningful CPU, GPU, and memory cost. Click the nested game to control it, press `F10` to return to the desktop, and save before pressing Stop.
 
+### Display size and rendering cost
+
+The runtime model is 15% larger than the laundering-station donor, while its 4x2 placement footprint and collision setup stay unchanged. Interaction uses a 55-degree field of view so text occupies more of the screen without moving the camera into the bezel.
+
+Nested Schedule I renders at 960x540. Each uncompressed RGBA frame is about 2.0 MiB, compared with 0.9 MiB at the previous 640x360 setting. This is 2.25 times as many pixels per capture, but remains below the bridge's existing 1280x720 capacity.
+
 ## Requirements
 
 - Schedule I
@@ -136,6 +142,12 @@ dotnet run --project tests\UsableComputer.RegistryVerifier\UsableComputer.Regist
 dotnet run --project tests\UsableComputer.FileSystemVerifier\UsableComputer.FileSystemVerifier.csproj -c Release
 dotnet run --project tests\UsableComputer.LuaVerifier\UsableComputer.LuaVerifier.csproj -c Release
 dotnet run --project tests\UsableComputer.DoomVerifier\UsableComputer.DoomVerifier.csproj -c Release -- C:\path\to\an\iwad.wad
+```
+
+Camera and display changes have a Mono smoke test that isolates the target install's mod directory, loads a disposable save copy, and captures the physical computer:
+
+```powershell
+.\tests\Run-DisplaySmoke.ps1 -GamePath C:\path\to\Schedule-I -SourceSavePath C:\path\to\SaveGame
 ```
 
 The VFS smoke runner builds an isolated test mod, copies a completed save into a temporary fixture, proves persistence across two game processes, captures the Files window, and restores the target install afterward:

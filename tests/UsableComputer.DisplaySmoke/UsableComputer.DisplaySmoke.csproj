@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="..\..\local.build.props" Condition="Exists('..\..\local.build.props')" />
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.1</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <AssemblyName>UsableComputer.DisplaySmoke</AssemblyName>
+    <RootNamespace>UsableComputer.DisplaySmoke</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Reference Include="MelonLoader" HintPath="$(MonoMelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="Assembly-CSharp" HintPath="$(MonoAssembliesPath)\Assembly-CSharp.dll" Private="false" />
+    <Reference Include="FishNet.Runtime" HintPath="$(MonoAssembliesPath)\FishNet.Runtime.dll" Private="false" />
+    <Reference Include="ScheduleOne.Core" HintPath="$(MonoAssembliesPath)\ScheduleOne.Core.dll" Private="false" />
+    <Reference Include="UnityEngine" HintPath="$(MonoAssembliesPath)\UnityEngine.dll" Private="false" />
+    <Reference Include="UnityEngine.CoreModule" HintPath="$(MonoAssembliesPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="$(MonoAssembliesPath)\UnityEngine.PhysicsModule.dll" Private="false" />
+    <Reference Include="UnityEngine.ScreenCaptureModule" HintPath="$(MonoAssembliesPath)\UnityEngine.ScreenCaptureModule.dll" Private="false" />
+  </ItemGroup>
+</Project>
