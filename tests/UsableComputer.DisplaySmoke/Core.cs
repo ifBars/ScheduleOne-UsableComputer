@@ -198,6 +198,23 @@ public sealed class Core : MelonMod
             Require(
                 settingsWindow != null && settingsWindow.activeInHierarchy,
                 "The Settings window did not open for visual validation.");
+            GameObject desktopRoot = (GameObject)(shellType
+                .GetField("_root", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .GetValue(shell) ?? throw new InvalidOperationException("Desktop root was not created."));
+            Transform startButtonTransform = desktopRoot.transform.Find("Taskbar/Start")
+                ?? throw new InvalidOperationException("The Start button was not created.");
+            GameObject startButton = startButtonTransform.gameObject;
+            RectTransform startRect = startButton.GetComponent<RectTransform>();
+            Require(startRect.sizeDelta.x <= 48f, $"The Start button was not compact: {startRect.sizeDelta.x:F1}px.");
+            Require(startButton.transform.Find("Icon") != null, "The Start button icon was not created.");
+            Transform? startLabel = startButton.transform.Find("Label");
+            Require(startLabel != null && !startLabel.gameObject.activeSelf, "The Start button still renders a text label.");
+            Require(startButton.transform.parent.Find("StartTooltip") != null, "The Start tooltip was not created.");
+            shellType.GetMethod("ToggleStartMenu", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(shell, null);
+            Transform startMenu = desktopRoot.transform.Find("StartMenu")
+                ?? throw new InvalidOperationException("The Start menu was not created.");
+            Require(startMenu.gameObject.activeInHierarchy, "The Start menu did not open from the icon button.");
             _desktop = (IDisposable)shell;
 
             string expectedClock = S1NativeTimeManager.Get12HourTime(S1NativeTimeManager.Instance.CurrentTime, true);

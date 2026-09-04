@@ -12,6 +12,7 @@ internal enum BuiltInIcon
     Calculator,
     About,
     Studio,
+    Start,
     Settings,
     Doom,
     ScheduleOne,
@@ -99,6 +100,9 @@ internal static class RuntimeAppIcons
             case BuiltInIcon.Studio:
                 DrawStudio(pixels);
                 break;
+            case BuiltInIcon.Start:
+                DrawStart(pixels);
+                break;
             case BuiltInIcon.Settings:
                 DrawSettings(pixels);
                 break;
@@ -182,6 +186,20 @@ internal static class RuntimeAppIcons
         DrawRect(pixels, 11, 16, 18, 24, new Color32(121, 178, 234, 255));
         DrawRect(pixels, 34, 31, 18, 9, new Color32(245, 196, 69, 255));
         DrawRect(pixels, 34, 18, 18, 9, new Color32(120, 193, 105, 255));
+    }
+
+    private static void DrawStart(Color32[] pixels)
+    {
+        Color32 outline = new(24, 48, 87, 255);
+        DrawRect(pixels, 6, 13, 45, 34, outline);
+        DrawRect(pixels, 10, 17, 37, 26, new Color32(210, 236, 248, 255));
+        DrawRect(pixels, 13, 20, 31, 20, new Color32(67, 157, 218, 255));
+        DrawRect(pixels, 24, 8, 9, 5, outline);
+        DrawRect(pixels, 17, 5, 23, 4, outline);
+
+        DrawLine(pixels, 37, 31, 50, 31, new Color32(255, 244, 181, 255), 5);
+        DrawLine(pixels, 46, 25, 53, 31, new Color32(255, 244, 181, 255), 5);
+        DrawLine(pixels, 46, 37, 53, 31, new Color32(255, 244, 181, 255), 5);
     }
 
     private static void DrawSettings(Color32[] pixels)

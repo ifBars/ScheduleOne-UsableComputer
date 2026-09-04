@@ -31,6 +31,8 @@ internal sealed class DesktopShell : IDisposable
     private readonly WindowManager _windows;
     private readonly RuntimeWallpaper _wallpaper;
     private readonly NativeGameClock _gameClock = new();
+    private readonly Button _startButton;
+    private readonly GameObject _startTooltip;
     private readonly S1Text _clock;
     private GameObject? _desktopIconsRoot;
     private GameObject? _startMenu;
@@ -88,19 +90,41 @@ internal sealed class DesktopShell : IDisposable
         taskbarRect.sizeDelta = new Vector2(0f, 42f);
         taskbarRect.anchoredPosition = Vector2.zero;
 
-        Button startButton = UiFactory.CreateButton(
+        _startButton = UiFactory.CreateButton(
             taskbarObject.transform,
             "Start",
-            "start",
+            string.Empty,
             UiFactory.StartGreen,
             out S1Text startLabel);
-        startLabel.color = UiFactory.TextOnAccent;
-        RectTransform startButtonRect = startButton.GetComponent<RectTransform>();
+        startLabel.gameObject.SetActive(false);
+        RectTransform startButtonRect = _startButton.GetComponent<RectTransform>();
         startButtonRect.anchorMin = new Vector2(0f, 0.5f);
         startButtonRect.anchorMax = new Vector2(0f, 0.5f);
         startButtonRect.pivot = new Vector2(0f, 0.5f);
-        startButtonRect.sizeDelta = new Vector2(86f, -8f);
+        startButtonRect.sizeDelta = new Vector2(48f, -8f);
         startButtonRect.anchoredPosition = new Vector2(8f, 0f);
+        AddStartButtonIcon(_startButton.transform);
+
+        _startTooltip = UiFactory.CreatePanel(taskbarObject.transform, "StartTooltip", UiFactory.SurfaceRaised);
+        RectTransform tooltipRect = _startTooltip.GetComponent<RectTransform>();
+        tooltipRect.anchorMin = Vector2.zero;
+        tooltipRect.anchorMax = Vector2.zero;
+        tooltipRect.pivot = Vector2.zero;
+        tooltipRect.sizeDelta = new Vector2(52f, 24f);
+        tooltipRect.anchoredPosition = new Vector2(8f, 46f);
+        S1Text tooltipLabel = UiFactory.CreateText(
+            _startTooltip.transform,
+            "Label",
+            "Start",
+            13f,
+            UiFactory.TextPrimary,
+            GetCenterAlignment());
+        UiFactory.Stretch(tooltipLabel.rectTransform, new Vector2(4f, 2f));
+        _startTooltip.SetActive(false);
+
+        var startTrigger = _startButton.gameObject.AddComponent<EventTrigger>();
+        _listeners.AddTrigger(startTrigger, EventTriggerType.PointerEnter, _ => ShowStartTooltip());
+        _listeners.AddTrigger(startTrigger, EventTriggerType.PointerExit, _ => HideStartTooltip());
 
         GameObject taskbarAppsObject = new GameObject("TaskbarApps");
         taskbarAppsObject.transform.SetParent(taskbarObject.transform, false);
@@ -108,7 +132,7 @@ internal sealed class DesktopShell : IDisposable
         RectTransform taskbarApps = taskbarAppsObject.GetComponent<RectTransform>();
         taskbarApps.anchorMin = new Vector2(0f, 0f);
         taskbarApps.anchorMax = new Vector2(1f, 1f);
-        taskbarApps.offsetMin = new Vector2(102f, 0f);
+        taskbarApps.offsetMin = new Vector2(64f, 0f);
         taskbarApps.offsetMax = new Vector2(-94f, 0f);
 
         _clock = UiFactory.CreateText(
@@ -125,7 +149,7 @@ internal sealed class DesktopShell : IDisposable
         _clock.rectTransform.anchoredPosition = new Vector2(-8f, 0f);
 
         _windows = new WindowManager(windowLayer, taskbarApps, eventCamera, OpenApp);
-        _listeners.Add(ToggleStartMenu, startButton.onClick);
+        _listeners.Add(ToggleStartMenu, _startButton.onClick);
         RefreshAppSurfaces();
 
         DesktopAppRegistry.Changed += _onRegistryChanged;
@@ -262,7 +286,7 @@ internal sealed class DesktopShell : IDisposable
                     UnityEngine.Object.Destroy(_startMenu);
                 _startMenu = BuildStartMenu(descriptors);
                 GameObject startMenu = _startMenu;
-                startMenu.SetActive(false);
+                SetStartMenuOpen(false);
                 // Root-level ordering is intentional: icons < windows < taskbar < Start menu.
                 desktopIconsRoot.transform.SetSiblingIndex(Mathf.Max(0, _windowLayer.GetSiblingIndex() - 1));
                 startMenu.transform.SetAsLastSibling();
@@ -448,6 +472,25 @@ internal sealed class DesktopShell : IDisposable
         image.raycastTarget = false;
     }
 
+    private static void AddStartButtonIcon(Transform parent)
+    {
+        GameObject iconObject = new("Icon");
+        iconObject.transform.SetParent(parent, false);
+        RectTransform iconRect = iconObject.AddComponent<RectTransform>();
+        UiFactory.SetRect(
+            iconRect,
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(0.5f, 0.5f),
+            new Vector2(28f, 28f),
+            Vector2.zero);
+        Image image = iconObject.AddComponent<Image>();
+        image.sprite = RuntimeAppIcons.Get(BuiltInIcon.Start);
+        image.color = Color.white;
+        image.preserveAspect = true;
+        image.raycastTarget = false;
+    }
+
     private void CreateDesktopIcon(
         Transform parent,
         VirtualFileSystemNode node,
@@ -532,14 +575,40 @@ internal sealed class DesktopShell : IDisposable
     private void ToggleStartMenu()
     {
         if (_startMenu != null)
-            _startMenu.SetActive(!_startMenu.activeSelf);
+            SetStartMenuOpen(!_startMenu.activeSelf);
     }
 
     private void HideStartMenu()
     {
         if (_startMenu != null)
-            _startMenu.SetActive(false);
+            SetStartMenuOpen(false);
     }
+
+    private void SetStartMenuOpen(bool open)
+    {
+        _startMenu?.SetActive(open);
+        HideStartTooltip();
+
+        Color normal = open
+            ? Color.Lerp(UiFactory.StartGreen, Color.black, 0.22f)
+            : UiFactory.StartGreen;
+        ColorBlock colors = _startButton.colors;
+        colors.normalColor = normal;
+        colors.selectedColor = normal;
+        colors.highlightedColor = Color.Lerp(normal, Color.white, 0.16f);
+        colors.pressedColor = Color.Lerp(normal, Color.black, 0.14f);
+        colors.disabledColor = new Color(normal.r, normal.g, normal.b, 0.45f);
+        _startButton.colors = colors;
+        _startButton.targetGraphic.color = normal;
+    }
+
+    private void ShowStartTooltip()
+    {
+        if (_startMenu?.activeSelf != true)
+            _startTooltip.SetActive(true);
+    }
+
+    private void HideStartTooltip() => _startTooltip.SetActive(false);
 
     private void ApplyAppearance(DesktopAppearance previous, DesktopAppearance next)
     {
