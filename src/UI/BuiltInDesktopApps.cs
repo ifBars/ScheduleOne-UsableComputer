@@ -113,7 +113,8 @@ internal static class BuiltInDesktopApps
                 new Vector2(720f, 470f),
                 Vector2.zero,
                 context => new NestedGameApp(context),
-                () => RuntimeAppIcons.Get(BuiltInIcon.ScheduleOne)));
+                () => NativeGameBrandAssets.GetScheduleOneLogo()
+                    ?? RuntimeAppIcons.Get(BuiltInIcon.ScheduleOne)));
     }
 
     internal static void UnregisterAll()
@@ -121,6 +122,7 @@ internal static class BuiltInDesktopApps
         foreach (string id in AppIds)
             DesktopAppRegistry.Unregister(id);
         RuntimeAppIcons.Dispose();
+        NativeGameBrandAssets.Reset();
     }
 
     private static void Register(DesktopAppDescriptor descriptor)

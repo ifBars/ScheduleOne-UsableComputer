@@ -215,6 +215,17 @@ public sealed class Core : MelonMod
             Transform startMenu = desktopRoot.transform.Find("StartMenu")
                 ?? throw new InvalidOperationException("The Start menu was not created.");
             Require(startMenu.gameObject.activeInHierarchy, "The Start menu did not open from the icon button.");
+            bool hasNativeScheduleOneLogo = false;
+            foreach (UnityEngine.UI.Image image in desktopRoot.GetComponentsInChildren<UnityEngine.UI.Image>(true))
+            {
+                if (image.sprite != null &&
+                    string.Equals(image.sprite.name, "S1 Logo Whiteout small", StringComparison.Ordinal))
+                {
+                    hasNativeScheduleOneLogo = true;
+                    break;
+                }
+            }
+            Require(hasNativeScheduleOneLogo, "The desktop did not use the game-owned Schedule I logo sprite.");
             _desktop = (IDisposable)shell;
 
             string expectedClock = S1NativeTimeManager.Get12HourTime(S1NativeTimeManager.Instance.CurrentTime, true);

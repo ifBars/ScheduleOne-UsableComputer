@@ -48,7 +48,8 @@ internal sealed class LuaAppDefinition
         "products" => NativePhoneAppAssets.GetProductManagerIcon() ?? RuntimeAppIcons.Get(BuiltInIcon.Generic),
         "settings" => RuntimeAppIcons.Get(BuiltInIcon.Settings),
         "doom" => RuntimeAppIcons.Get(BuiltInIcon.Doom),
-        "schedule-one" => RuntimeAppIcons.Get(BuiltInIcon.ScheduleOne),
+        "schedule-one" => NativeGameBrandAssets.GetScheduleOneLogo()
+            ?? RuntimeAppIcons.Get(BuiltInIcon.ScheduleOne),
         _ => RuntimeAppIcons.Get(BuiltInIcon.Generic),
     };
 }
