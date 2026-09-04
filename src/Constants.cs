@@ -17,6 +17,7 @@ internal static class Constants
     internal const string ScreenAnchorName = "UsableComputer_ScreenAnchor";
     internal const string CanvasName = "UsableComputer_DesktopCanvas";
     internal const string NotesAppId = "notes";
+    internal const string FilesAppId = "files";
     internal const string CalculatorAppId = "calculator";
     internal const string AboutAppId = "about";
     internal const string JournalAppId = "journal";

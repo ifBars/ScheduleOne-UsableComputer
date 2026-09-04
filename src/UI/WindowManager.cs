@@ -19,15 +19,21 @@ internal sealed class WindowManager : IDisposable
 {
     private readonly RectTransform _windowLayer;
     private readonly RectTransform _taskbarApps;
+    private readonly Action<string> _requestOpenApp;
     private Camera? _eventCamera;
     private readonly List<DesktopWindow> _windows = new();
     private bool _disposed;
 
-    internal WindowManager(RectTransform windowLayer, RectTransform taskbarApps, Camera? eventCamera)
+    internal WindowManager(
+        RectTransform windowLayer,
+        RectTransform taskbarApps,
+        Camera? eventCamera,
+        Action<string> requestOpenApp)
     {
         _windowLayer = windowLayer;
         _taskbarApps = taskbarApps;
         _eventCamera = eventCamera;
+        _requestOpenApp = requestOpenApp ?? throw new ArgumentNullException(nameof(requestOpenApp));
     }
 
     internal DesktopWindow? Open(DesktopAppDescriptor descriptor)
@@ -99,6 +105,18 @@ internal sealed class WindowManager : IDisposable
         }
     }
 
+    internal void OpenDirectory(string appId, string directoryId)
+    {
+        foreach (DesktopWindow window in _windows)
+        {
+            if (string.Equals(window.AppId, appId, StringComparison.Ordinal))
+            {
+                window.OpenDirectory(directoryId);
+                return;
+            }
+        }
+    }
+
     internal IReadOnlyList<string> GetAppIds()
     {
         var result = new List<string>(_windows.Count);
@@ -130,6 +148,11 @@ internal sealed class WindowManager : IDisposable
         _eventCamera = eventCamera;
         foreach (DesktopWindow window in _windows)
             window.SetEventCamera(eventCamera);
+    }
+
+    internal void RequestOpenApp(string appId)
+    {
+        _requestOpenApp(appId);
     }
 
     internal void Remove(DesktopWindow window)
@@ -171,6 +194,11 @@ internal sealed class WindowManager : IDisposable
 internal interface IDesktopAppVisibilitySession
 {
     void OnVisibilityChanged(bool visible);
+}
+
+internal interface IDesktopDirectorySession
+{
+    void OpenDirectory(string directoryId);
 }
 
 internal sealed class DesktopWindow : IDisposable
@@ -227,6 +255,7 @@ internal sealed class DesktopWindow : IDisposable
             _eventCamera,
             _listeners,
             Close,
+            _manager.RequestOpenApp,
             value => S1GameInput.IsTyping = value);
         IDesktopAppSession? createdSession = _descriptor.CreateSession(_context);
         if (createdSession == null)
@@ -283,6 +312,12 @@ internal sealed class DesktopWindow : IDisposable
     {
         _eventCamera = eventCamera;
         _context?.SetEventCamera(eventCamera);
+    }
+
+    internal void OpenDirectory(string directoryId)
+    {
+        if (!_disposed && _session is IDesktopDirectorySession directorySession)
+            directorySession.OpenDirectory(directoryId);
     }
 
     internal void SetVisible(bool visible)

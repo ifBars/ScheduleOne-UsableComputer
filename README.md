@@ -10,12 +10,13 @@ Usable Computer builds its furniture model at runtime from the game's laundering
 
 - Adds a 4x2 computer desk to both hardware shops for $750.
 - Opens through the game's normal interaction flow with a close-up camera and proper input cleanup.
-- Includes Notes, Calculator, Journal, Product Manager, Settings, App Studio, Doom, and Schedule I apps.
+- Includes Files, Notes, Calculator, Journal, Product Manager, Settings, App Studio, Doom, and Schedule I apps.
 - Reuses live phone icons and product images for native integrations without cloning the phone UI.
 - Supports movable, minimizable, maximizable, and closable desktop windows.
 - Includes persistent light and dark themes plus three independently selected desktop backgrounds.
 - Lets C# mods register apps through a small public API.
 - Lets players write and save sandboxed Lua apps from App Studio.
+- Includes a sandboxed per-save virtual filesystem for desktop folders and app shortcuts.
 - Supports both Mono and IL2CPP builds.
 
 ## Screenshots
@@ -76,6 +77,8 @@ Journal and Product Manager read the native game state through narrow adapters. 
 
 Notes persist through MelonPreferences. Appearance settings also persist, with theme and background stored separately so switching light or dark mode does not replace the wallpaper.
 
+Files organizes the desktop through a virtual filesystem stored with the active Schedule I save. Create and rename folders from the Files app, then cut and paste app shortcuts between folders. Empty folders can be deleted. Virtual paths never map to arbitrary files on the host computer, and unavailable mod-app shortcuts remain in place so they recover if the app is installed again.
+
 ### Doom
 
 Doom uses the vendored [Managed Doom](https://github.com/sinshu/managed-doom) engine. The mod does not include game data. Add an IWAD you own, or a compatible free IWAD such as [Freedoom](https://github.com/freedoom/freedoom), to:
@@ -131,11 +134,12 @@ Each window gets its own `IDesktopAppSession`. Apps registered after the compute
 
 ## Development
 
-The focused verifiers cover the calculator model, app registry, Lua host, and Doom adapter without starting Unity:
+The focused verifiers cover the calculator model, app registry, virtual filesystem, Lua host, and Doom adapter without starting Unity:
 
 ```powershell
 dotnet run --project tests\UsableComputer.CalculatorModelVerifier\UsableComputer.CalculatorModelVerifier.csproj -c Release
 dotnet run --project tests\UsableComputer.RegistryVerifier\UsableComputer.RegistryVerifier.csproj -c Release
+dotnet run --project tests\UsableComputer.FileSystemVerifier\UsableComputer.FileSystemVerifier.csproj -c Release
 dotnet run --project tests\UsableComputer.LuaVerifier\UsableComputer.LuaVerifier.csproj -c Release
 dotnet run --project tests\UsableComputer.DoomVerifier\UsableComputer.DoomVerifier.csproj -c Release -- C:\path\to\an\iwad.wad
 ```
@@ -144,6 +148,13 @@ Camera and display changes have a Mono smoke test that isolates the target insta
 
 ```powershell
 .\tests\Run-DisplaySmoke.ps1 -GamePath C:\path\to\Schedule-I -SourceSavePath C:\path\to\SaveGame
+```
+
+The VFS smoke runner builds an isolated test mod, copies a completed save into a temporary fixture, proves persistence across two game processes, captures the Files window, and restores the target install afterward:
+
+```powershell
+.\tests\Run-VfsSmoke.ps1 -Runtime Mono -GamePath C:\path\to\ScheduleI -SourceSavePath C:\path\to\SaveGame_1
+.\tests\Run-VfsSmoke.ps1 -Runtime Il2cpp -GamePath C:\path\to\ScheduleI -SourceSavePath C:\path\to\SaveGame_1
 ```
 
 Pure verifier passes do not replace an in-game test. Test the matching build in a backed-up or disposable save before release.
