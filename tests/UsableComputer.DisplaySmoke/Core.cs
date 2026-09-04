@@ -192,6 +192,12 @@ public sealed class Core : MelonMod
             shellType.GetMethod("Show", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(shell, null);
             shellType.GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!
                 .Invoke(shell, new object[] { "app-studio" });
+            shellType.GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(shell, new object[] { "settings" });
+            GameObject? settingsWindow = GameObject.Find("Window_settings");
+            Require(
+                settingsWindow != null && settingsWindow.activeInHierarchy,
+                "The Settings window did not open for visual validation.");
             _desktop = (IDisposable)shell;
 
             string expectedClock = S1NativeTimeManager.Get12HourTime(S1NativeTimeManager.Instance.CurrentTime, true);
