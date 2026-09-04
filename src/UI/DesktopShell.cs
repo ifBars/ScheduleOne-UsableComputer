@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using UsableComputer.API;
+using UsableComputer.Native;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -28,6 +28,7 @@ internal sealed class DesktopShell : IDisposable
     private readonly RectTransform _windowLayer;
     private readonly WindowManager _windows;
     private readonly RuntimeWallpaper _wallpaper;
+    private readonly NativeGameClock _gameClock = new();
     private readonly S1Text _clock;
     private GameObject? _desktopIconsRoot;
     private GameObject? _startMenu;
@@ -553,7 +554,9 @@ internal sealed class DesktopShell : IDisposable
 
     private void UpdateClock()
     {
-        string clock = DateTime.Now.ToString("h:mm tt", CultureInfo.CurrentCulture);
+        string clock = _gameClock.TryGetFormattedTime(out string formattedTime)
+            ? formattedTime
+            : string.Empty;
         if (string.Equals(clock, _lastClock, StringComparison.Ordinal))
             return;
 

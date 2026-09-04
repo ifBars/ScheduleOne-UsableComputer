@@ -33,6 +33,10 @@
     <Reference Include="UnityEngine.UIModule" HintPath="$(MonoAssembliesPath)\UnityEngine.UIModule.dll" Private="false" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Include="..\..\src\DisplayProfile.cs" Link="DisplayProfile.cs" />
+  </ItemGroup>
+
   <ItemGroup Condition="'$(Configuration)' == 'Il2cpp'">
     <Reference Include="0Harmony" HintPath="$(Il2CppMelonLoaderPath)\0Harmony.dll" Private="false" />
     <Reference Include="MelonLoader" HintPath="$(Il2CppMelonLoaderPath)\MelonLoader.dll" Private="false" />
