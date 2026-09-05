@@ -48,11 +48,20 @@ public sealed class Core : MelonMod
     private IDisposable? _desktop;
     private GameObject? _screenAnchor;
     private GameObject? _computerModel;
+    private bool _iconLayout;
+    private IDisposable? _controller;
+
+    public override void OnUpdate()
+    {
+        _controller?.GetType().GetMethod("Tick", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(_controller, new object[] { Time.unscaledTime });
+    }
 
     public override void OnInitializeMelon()
     {
         string[] args = Environment.GetCommandLineArgs();
         _enabled = Array.IndexOf(args, "--usable-computer-vfs-smoke") >= 0;
+        _iconLayout = Array.IndexOf(args, "--usable-computer-icon-layout-smoke") >= 0;
         if (!_enabled)
             return;
 
@@ -79,8 +88,12 @@ public sealed class Core : MelonMod
         }
     }
 
-    public override void OnDeinitializeMelon()
+    public override void OnDeinitializeMelon() => CleanupFixture();
+
+    private void CleanupFixture()
     {
+        _controller?.Dispose();
+        _controller = null;
         _desktop?.Dispose();
         _desktop = null;
         if (_computerModel != null)
@@ -166,6 +179,12 @@ public sealed class Core : MelonMod
         Screen.SetResolution(1280, 720, false);
         yield return new WaitForSecondsRealtime(2f);
 
+        if (_iconLayout)
+        {
+            yield return RunIconLayoutScenario();
+            if (_completed) yield break;
+        }
+
         string screenshotPath = Path.Combine(_outputDirectory, $"vfs-{_phase}.png");
         ScreenCapture.CaptureScreenshot(screenshotPath);
         deadline = Time.realtimeSinceStartup + 10f;
@@ -241,6 +260,252 @@ public sealed class Core : MelonMod
         return folderId;
     }
 
+    private IEnumerator RunIconLayoutScenario()
+    {
+        Type preferences = GetUsableComputerAssembly().GetType("UsableComputer.PreferencesStore", true)!;
+        if (_phase == "reload")
+        {
+            try
+            {
+                Require(preferences.GetProperty("IconSize", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!.ToString() == "Large", "Icon size did not survive process reload.");
+                Require(preferences.GetProperty("IconOrder", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!.ToString() == "Name", "Icon order did not survive process reload.");
+            }
+            catch (Exception exception)
+            {
+                Fail("Icon preferences reload failed", Unwrap(exception));
+                yield break;
+            }
+        }
+
+        foreach (string theme in new[] { "Light", "Dark" })
+        {
+            foreach (string size in new[] { "Small", "Medium", "Large" })
+            {
+                try
+                {
+                    OpenSettings();
+                    ClickChoice(theme);
+                    ClickChoice(size);
+                    ClickChoice("Folders first");
+                    ValidateIconLayout(size, foldersFirst: true);
+                    ClickChoice("Arrange by name");
+                    ValidateIconLayout(size, foldersFirst: false);
+                }
+                catch (Exception exception)
+                {
+                    Fail($"Icon layout {theme}/{size} failed", Unwrap(exception));
+                    yield break;
+                }
+                yield return new WaitForSecondsRealtime(0.3f);
+                if (size == "Large")
+                {
+                    string settingsPath = Path.Combine(_outputDirectory, $"settings-{theme}.png");
+                    ScreenCapture.CaptureScreenshot(settingsPath);
+                    yield return WaitForCapture(settingsPath);
+                    if (_completed) yield break;
+                }
+                CloseAllWindows();
+                yield return new WaitForSecondsRealtime(0.3f);
+                string path = Path.Combine(_outputDirectory, $"icons-{theme}-{size}.png");
+                ScreenCapture.CaptureScreenshot(path);
+                yield return WaitForCapture(path);
+                if (_completed) yield break;
+            }
+            try
+            {
+                _desktop!.GetType().GetMethod("ToggleStartMenu", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_desktop, null);
+                GameObject menu = GameObject.Find("StartMenu")!;
+                var scroll = menu.transform.Find("ProgramsViewport").GetComponent<UnityEngine.UI.ScrollRect>();
+                Require(scroll.vertical && !scroll.horizontal, "Programs list is not vertically scrollable.");
+                Require(menu.GetComponent<RectTransform>().sizeDelta.y + 50f <= 536f, "Start menu exceeds desktop.");
+                Require(scroll.content.rect.height > scroll.viewport.rect.height, "Built-in programs do not exercise overflow.");
+                Canvas.ForceUpdateCanvases();
+                scroll.verticalScrollbar.value = 1f;
+                scroll.verticalScrollbar.value = 0f;
+            }
+            catch (Exception exception)
+            {
+                Fail("Scrollable Start menu failed", Unwrap(exception));
+                yield break;
+            }
+            yield return new WaitForSecondsRealtime(0.3f);
+            string menuPath = Path.Combine(_outputDirectory, $"start-menu-{theme}.png");
+            ScreenCapture.CaptureScreenshot(menuPath);
+            yield return WaitForCapture(menuPath);
+            if (_completed) yield break;
+            try
+            {
+                var scroll = GameObject.Find("StartMenu").transform.Find("ProgramsViewport").GetComponent<UnityEngine.UI.ScrollRect>();
+                Vector3[] corners = GetWorldCorners(scroll.content.GetChild(scroll.content.childCount - 1).GetComponent<RectTransform>());
+                foreach (Vector3 corner in corners)
+                {
+                    Vector3 point = scroll.viewport.InverseTransformPoint(corner);
+                    Rect viewport = scroll.viewport.rect;
+                    Require(point.x >= viewport.xMin - 0.1f && point.x <= viewport.xMax + 0.1f && point.y >= viewport.yMin - 0.1f && point.y <= viewport.yMax + 0.1f,
+                        $"Last program is clipped after scrolling: point={point} viewport={viewport} offset={scroll.content.anchoredPosition} normalized={scroll.verticalNormalizedPosition}.");
+                }
+                Require(GameObject.Find("Start_Settings").activeInHierarchy && GameObject.Find("Start_Power off").activeInHierarchy, "Footer actions disappeared while scrolling.");
+                GameObject.Find("Start_Notes").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                RequireWindow("notes");
+                CloseAllWindows();
+            }
+            catch (Exception exception)
+            {
+                Fail("Start menu scrolled action failed", Unwrap(exception));
+                yield break;
+            }
+        }
+        yield return ValidateDesktopOverflow();
+        if (_completed) yield break;
+        foreach (Vector2 resolution in new[] { new Vector2(1280, 720), new Vector2(1024, 768), new Vector2(800, 900), new Vector2(1920, 1080), new Vector2(1600, 675) })
+        {
+            Screen.SetResolution((int)resolution.x, (int)resolution.y, false);
+            yield return new WaitForSecondsRealtime(1f);
+            string viewPath = Path.Combine(_outputDirectory, $"view-{Screen.width}x{Screen.height}.png");
+            ScreenCapture.CaptureScreenshot(viewPath);
+            yield return WaitForCapture(viewPath);
+            if (_completed) yield break;
+            try
+            {
+                RectTransform canvas = GameObject.Find("UsableComputer_DesktopCanvas").GetComponent<RectTransform>();
+                Vector3[] corners = GetWorldCorners(canvas);
+                Vector3 center = Camera.main!.WorldToViewportPoint(canvas.position);
+                LoggerInstance.Msg($"[UsableComputerViewSmoke] Resolution={Screen.width}x{Screen.height} Aspect={Camera.main.aspect} Center={center} FOV={Camera.main.fieldOfView}");
+                foreach (Vector3 corner in corners)
+                {
+                    Vector3 point = Camera.main.WorldToViewportPoint(corner);
+                    Require(point.z > 0f && point.x >= 0f && point.x <= 1f && point.y >= 0f && point.y <= 1f,
+                        $"Desktop clipped at {Screen.width}x{Screen.height}: {point}");
+                }
+                Require(Math.Abs(center.x - 0.5f) < 0.04f && Math.Abs(center.y - 0.5f) < 0.04f, "Desktop is off-center.");
+            }
+            catch (Exception exception)
+            {
+                Fail("Resolution camera fit failed", Unwrap(exception));
+                yield break;
+            }
+        }
+        Screen.SetResolution(1280, 720, false);
+        yield return new WaitForSecondsRealtime(1f);
+        LoggerInstance.Msg($"[UsableComputerIconLayoutSmoke] PASS Runtime={ConstantsRuntime()} Phase={_phase} Sizes=3 Themes=2 Order=Name,Kind Reload={_phase == "reload"}");
+    }
+
+    private IEnumerator ValidateDesktopOverflow()
+    {
+        object service = GetServiceType();
+        var ids = new List<string>();
+        try
+        {
+            for (int index = 0; index < 30; index++)
+                ids.Add(ReadString(Invoke(service, "CreateDirectory", "desktop", $"Overflow folder with a long label {index:00}")!, "Id"));
+            Canvas.ForceUpdateCanvases();
+            var scroll = GameObject.Find("DesktopIconViewport").GetComponent<UnityEngine.UI.ScrollRect>();
+            scroll.horizontalScrollbar.value = 0f;
+            scroll.horizontalScrollbar.value = 1f;
+            yield return new WaitForSecondsRealtime(0.3f);
+            try
+            {
+                Require(scroll.horizontalScrollbar.gameObject.activeInHierarchy, "Overflow scrollbar is hidden.");
+                Require(scroll.content.anchoredPosition.x < -1f, "Desktop did not scroll horizontally.");
+                Transform last = scroll.content.GetChild(scroll.content.childCount - 1);
+                Vector3[] corners = GetWorldCorners(last.GetComponent<RectTransform>());
+                foreach (Vector3 corner in corners)
+                {
+                    Vector3 point = scroll.viewport.InverseTransformPoint(corner);
+                    Rect viewport = scroll.viewport.rect;
+                    Require(point.x >= viewport.xMin - 0.1f && point.x <= viewport.xMax + 0.1f, "Last desktop icon is unreachable.");
+                }
+                last.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                RequireWindow("files");
+                CloseAllWindows();
+            }
+            catch (Exception exception)
+            {
+                Fail("Desktop overflow failed", Unwrap(exception));
+            }
+        }
+        finally
+        {
+            foreach (string id in ids)
+                Invoke(service, "Delete", id);
+        }
+    }
+
+    private static Vector3[] GetWorldCorners(RectTransform rect)
+    {
+#if IL2CPP
+        // Native writes must be read back from the IL2CPP array, not its managed input copy.
+        var corners = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<Vector3>(4);
+        rect.GetWorldCorners(corners);
+        return corners.ToArray();
+#else
+        var corners = new Vector3[4];
+        rect.GetWorldCorners(corners);
+        return corners;
+#endif
+    }
+
+    private IEnumerator WaitForCapture(string path)
+    {
+        float deadline = Time.realtimeSinceStartup + 10f;
+        while ((!File.Exists(path) || new FileInfo(path).Length == 0) && Time.realtimeSinceStartup < deadline)
+            yield return null;
+        if (!File.Exists(path) || new FileInfo(path).Length == 0)
+            Fail("Icon screenshot was not written", new IOException(path));
+    }
+
+    private void OpenSettings()
+    {
+        CloseAllWindows();
+        _desktop!.GetType().GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!
+            .Invoke(_desktop, new object[] { "settings" });
+    }
+
+    private void RequireWindow(string appId)
+    {
+        object windows = _desktop!.GetType().GetField("_windows", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_desktop)!;
+        Require((bool)windows.GetType().GetMethod("HasWindow", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(windows, new object[] { appId })!,
+            $"App {appId} did not finish opening.");
+    }
+
+    private void CloseAllWindows()
+    {
+        object windows = _desktop!.GetType().GetField("_windows", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_desktop)!;
+        string[] ids = ((IEnumerable)windows.GetType().GetMethod("GetAppIds", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(windows, null)!).Cast<string>().ToArray();
+        foreach (string id in ids)
+            windows.GetType().GetMethod("CloseWindow", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(windows, new object[] { id });
+    }
+
+    private static void ClickChoice(string label)
+    {
+        GameObject button = GameObject.Find($"Choice_{label}") ?? throw new InvalidOperationException($"Missing choice {label}.");
+        button.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+    }
+
+    private void ValidateIconLayout(string size, bool foldersFirst)
+    {
+        GameObject root = (GameObject)_desktop!.GetType().GetField("_root", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_desktop)!;
+        RectTransform icons = root.transform.Find("DesktopIconViewport/DesktopIcons").GetComponent<RectTransform>();
+        Require(icons.childCount > 0, "No desktop icons were created.");
+        float expectedSize = size == "Small" ? 32f : size == "Large" ? 56f : 42f;
+        var nodes = GetChildren(GetServiceType(), "desktop").Cast<object>()
+            .OrderBy(node => foldersFirst && ReadString(node, "Kind") != "Directory" ? 1 : 0)
+            .ThenBy(node => ReadString(node, "Name"), StringComparer.OrdinalIgnoreCase)
+            .ThenBy(node => ReadString(node, "Id"), StringComparer.Ordinal).ToArray();
+        Require(icons.childCount == nodes.Length, "Desktop omitted filesystem nodes.");
+        for (int index = 0; index < icons.childCount; index++)
+        {
+            Transform child = icons.GetChild(index);
+            Require(child.name == $"DesktopIcon_{ReadString(nodes[index], "Id")}", "Auto-arrange ordering differs from saved preference.");
+            RectTransform frame = child.Find("IconFrame").GetComponent<RectTransform>();
+            Require(Math.Abs(frame.sizeDelta.x - expectedSize) < 0.01f, $"Incorrect {size} icon size.");
+            Require(child.GetComponent<UnityEngine.UI.Button>().interactable, "Icon cannot be clicked.");
+            RectTransform rect = child.GetComponent<RectTransform>();
+            Require(-rect.anchoredPosition.y + rect.sizeDelta.y <= 464f, "Icon overlaps taskbar/scrollbar.");
+            Require(rect.anchoredPosition.x + rect.sizeDelta.x / 2f <= icons.sizeDelta.x, "Icon is beyond scroll content.");
+        }
+    }
+
     private string VerifyReloadedVirtualFileSystem()
     {
         object service = GetServiceType();
@@ -271,22 +536,19 @@ public sealed class Core : MelonMod
         _screenAnchor = FindDescendant(_computerModel.transform, "UsableComputer_ScreenAnchor")?.gameObject
             ?? throw new InvalidOperationException("The fixture computer is missing its screen anchor.");
 
-        // Put the physical model at the production viewing pose relative to the
-        // current gameplay camera. The screenshot therefore includes the CRT,
-        // keyboard, room, and HUD—not a camera-mounted replacement canvas.
+        // Exercise the real controller, including camera transitions and resize handling.
         _computerModel.transform.rotation = camera.transform.rotation * Quaternion.Inverse(cameraAnchor.localRotation);
         _computerModel.transform.position = camera.transform.position -
-            (_computerModel.transform.rotation * cameraAnchor.localPosition) -
-            (camera.transform.forward * 0.16f);
+            (_computerModel.transform.rotation * Vector3.Scale(cameraAnchor.localPosition, _computerModel.transform.localScale));
         _computerModel.SetActive(true);
-        camera.fieldOfView = 55f;
-        object shell = Activator.CreateInstance(
-            shellType,
-            BindingFlags.Instance | BindingFlags.NonPublic,
-            binder: null,
-            args: new object[] { _screenAnchor.transform, camera, new Action(() => { }) },
-            culture: null) ?? throw new InvalidOperationException("DesktopShell could not be created.");
-        shellType.GetMethod("Show", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(shell, null);
+        _computerModel.name = "FurnitureVisual";
+        Type controllerType = assembly.GetType("UsableComputer.Runtime.UsableComputerController", true)!;
+        _controller = (IDisposable)Activator.CreateInstance(controllerType, BindingFlags.Instance | BindingFlags.NonPublic,
+            null, new object[] { _computerModel }, null)!;
+        controllerType.GetMethod("TryInitialize", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_controller, null);
+        controllerType.GetMethod("Open", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_controller, null);
+        Require((bool)controllerType.GetProperty("IsOpen", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_controller)!, "Real controller did not open.");
+        object shell = controllerType.GetField("_desktop", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_controller)!;
         GameObject desktopRoot = (GameObject)(shellType
             .GetField("_root", BindingFlags.Instance | BindingFlags.NonPublic)!
             .GetValue(shell) ?? throw new InvalidOperationException("Desktop root was not created."));
@@ -418,6 +680,7 @@ public sealed class Core : MelonMod
             $"Persisted=True|Screenshot={screenshotPath}|SaveFile={persistedPath}";
         File.WriteAllText(Path.Combine(_outputDirectory, "result.txt"), result);
         LoggerInstance.Msg($"[UsableComputerVfsSmoke] {result}");
+        CleanupFixture();
         Application.Quit();
     }
 
@@ -431,6 +694,7 @@ public sealed class Core : MelonMod
         File.WriteAllText(Path.Combine(_outputDirectory, "result.txt"), result);
         LoggerInstance.Error($"[UsableComputerVfsSmoke] {result}");
         LoggerInstance.Error(exception.ToString());
+        CleanupFixture();
         Application.Quit();
     }
 

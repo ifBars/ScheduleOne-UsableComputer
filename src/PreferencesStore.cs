@@ -1,6 +1,7 @@
 using MelonLoader;
 using System;
 using UsableComputer.UI;
+using UsableComputer.Logic;
 
 namespace UsableComputer;
 
@@ -9,6 +10,12 @@ internal static class PreferencesStore
     private static MelonPreferences_Entry<string>? _globalNote;
     private static MelonPreferences_Entry<string>? _theme;
     private static MelonPreferences_Entry<string>? _wallpaper;
+    private static MelonPreferences_Entry<string>? _iconSize;
+    private static MelonPreferences_Entry<string>? _iconOrder;
+
+    internal static event Action? IconLayoutChanged;
+    internal static DesktopIconSize IconSize => DesktopIconLayout.Parse(_iconSize?.Value, DesktopIconSize.Medium);
+    internal static DesktopIconOrder IconOrder => DesktopIconLayout.Parse(_iconOrder?.Value, DesktopIconOrder.Kind);
 
     internal static event Action<DesktopAppearance, DesktopAppearance>? AppearanceChanged;
 
@@ -36,6 +43,30 @@ internal static class PreferencesStore
             Constants.WallpaperPreferenceKey,
             WallpaperStyle.RollingHills.ToString(),
             "Usable Computer runtime wallpaper style.");
+        _iconSize = category.CreateEntry(Constants.IconSizePreferenceKey, DesktopIconSize.Medium.ToString(),
+            "Desktop icon size: Small, Medium, or Large.");
+        _iconOrder = category.CreateEntry(Constants.IconOrderPreferenceKey, DesktopIconOrder.Kind.ToString(),
+            "Desktop auto-arrange order: Name or Kind (folders first).");
+    }
+
+    internal static void SetIconSize(DesktopIconSize size)
+    {
+        EnsureInitialized();
+        if (!Enum.IsDefined(typeof(DesktopIconSize), size) || IconSize == size)
+            return;
+        _iconSize!.Value = size.ToString();
+        MelonPreferences.Save();
+        IconLayoutChanged?.Invoke();
+    }
+
+    internal static void ArrangeIcons(DesktopIconOrder order)
+    {
+        EnsureInitialized();
+        if (!Enum.IsDefined(typeof(DesktopIconOrder), order))
+            return;
+        _iconOrder!.Value = order.ToString();
+        MelonPreferences.Save();
+        IconLayoutChanged?.Invoke();
     }
 
     internal static void SetNote(string value)

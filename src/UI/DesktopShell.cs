@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UsableComputer.API;
 using UsableComputer.Native;
 using UsableComputer.FileSystem;
+using UsableComputer.Logic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -35,6 +36,9 @@ internal sealed class DesktopShell : IDisposable
     private readonly GameObject _startTooltip;
     private readonly S1Text _clock;
     private GameObject? _desktopIconsRoot;
+    private readonly RectTransform _iconViewport;
+    private readonly ScrollRect _iconScroll;
+    private readonly GameObject _iconScrollbar;
     private GameObject? _startMenu;
     private bool _registrySubscribed;
     private bool _refreshingSurfaces;
@@ -67,10 +71,35 @@ internal sealed class DesktopShell : IDisposable
 
         _wallpaper = RuntimeWallpaper.Create(_root.transform);
 
-        _desktopIconsRoot = new GameObject("DesktopIcons");
-        _desktopIconsRoot.transform.SetParent(_root.transform, false);
-        RectTransform desktopIconsRect = _desktopIconsRoot.AddComponent<RectTransform>();
-        UiFactory.Stretch(desktopIconsRect, Vector2.zero);
+        GameObject viewport = UiFactory.CreatePanel(_root.transform, "DesktopIconViewport", Color.clear);
+        _iconViewport = viewport.GetComponent<RectTransform>();
+        UiFactory.Stretch(_iconViewport, Vector2.zero);
+        _iconViewport.offsetMin = new Vector2(0f, 72f);
+        viewport.AddComponent<RectMask2D>();
+        _iconScroll = viewport.AddComponent<ScrollRect>();
+        _iconScroll.viewport = _iconViewport;
+        _iconScroll.horizontal = true;
+        _iconScroll.vertical = false;
+        _iconScroll.movementType = ScrollRect.MovementType.Clamped;
+        _iconScroll.scrollSensitivity = 30f;
+        _iconScroll.inertia = false;
+        EnsureDesktopIconsRoot();
+
+        _iconScrollbar = UiFactory.CreatePanel(_root.transform, "DesktopIconScrollbar", UiFactory.SurfaceInset);
+        RectTransform scrollbarRect = _iconScrollbar.GetComponent<RectTransform>();
+        scrollbarRect.anchorMin = Vector2.zero;
+        scrollbarRect.anchorMax = new Vector2(1f, 0f);
+        scrollbarRect.pivot = new Vector2(0.5f, 0f);
+        scrollbarRect.sizeDelta = new Vector2(-24f, 16f);
+        scrollbarRect.anchoredPosition = new Vector2(0f, 48f);
+        GameObject handle = UiFactory.CreatePanel(_iconScrollbar.transform, "Handle", UiFactory.SurfaceRaised);
+        UiFactory.Stretch(handle.GetComponent<RectTransform>(), Vector2.zero);
+        var scrollbar = _iconScrollbar.AddComponent<Scrollbar>();
+        scrollbar.handleRect = handle.GetComponent<RectTransform>();
+        scrollbar.targetGraphic = handle.GetComponent<Image>();
+        scrollbar.direction = Scrollbar.Direction.LeftToRight;
+        _iconScroll.horizontalScrollbar = scrollbar;
+        _iconScroll.horizontalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
         GameObject windowLayerObject = new GameObject("WindowLayer");
         windowLayerObject.transform.SetParent(_root.transform, false);
@@ -155,6 +184,7 @@ internal sealed class DesktopShell : IDisposable
         DesktopAppRegistry.Changed += _onRegistryChanged;
         VirtualFileSystemService.Changed += _onFileSystemChanged;
         PreferencesStore.AppearanceChanged += _onAppearanceChanged;
+        PreferencesStore.IconLayoutChanged += _onRegistryChanged;
         _registrySubscribed = true;
         UiFactory.SetLayerRecursively(_root, Constants.UiLayer);
         if (_startMenu != null)
@@ -212,6 +242,7 @@ internal sealed class DesktopShell : IDisposable
             DesktopAppRegistry.Changed -= _onRegistryChanged;
             VirtualFileSystemService.Changed -= _onFileSystemChanged;
             PreferencesStore.AppearanceChanged -= _onAppearanceChanged;
+            PreferencesStore.IconLayoutChanged -= _onRegistryChanged;
             _registrySubscribed = false;
         }
 
@@ -264,9 +295,13 @@ internal sealed class DesktopShell : IDisposable
                 GameObject desktopIconsRoot = _desktopIconsRoot
                     ?? throw new InvalidOperationException("Desktop icon root was not created.");
 
-                int desktopIndex = 0;
+                var layout = new DesktopIconLayout(PreferencesStore.IconSize);
                 IReadOnlyList<VirtualFileSystemNode> desktopNodes =
-                    VirtualFileSystemService.GetChildren(VirtualFileSystem.DesktopId);
+                    DesktopIconLayout.Arrange(VirtualFileSystemService.GetChildren(VirtualFileSystem.DesktopId), PreferencesStore.IconOrder);
+                desktopIconsRoot.GetComponent<RectTransform>().sizeDelta = new Vector2(layout.ContentWidth(desktopNodes.Count), 0f);
+                _iconScrollbar.SetActive(layout.ContentWidth(desktopNodes.Count) > DesktopIconLayout.DesktopWidth);
+                _iconScroll.StopMovement();
+                _iconScroll.horizontalNormalizedPosition = 0f;
                 for (int index = 0; index < desktopNodes.Count; index++)
                 {
                     VirtualFileSystemNode node = desktopNodes[index];
@@ -278,7 +313,8 @@ internal sealed class DesktopShell : IDisposable
                         desktopIconsRoot.transform,
                         node,
                         descriptor,
-                        GetIconPosition(desktopIndex++),
+                        new Vector2(layout.X(index), layout.Y(index)),
+                        layout,
                         () => OpenNode(nodeId));
                 }
 
@@ -288,7 +324,6 @@ internal sealed class DesktopShell : IDisposable
                 GameObject startMenu = _startMenu;
                 SetStartMenuOpen(false);
                 // Root-level ordering is intentional: icons < windows < taskbar < Start menu.
-                desktopIconsRoot.transform.SetSiblingIndex(Mathf.Max(0, _windowLayer.GetSiblingIndex() - 1));
                 startMenu.transform.SetAsLastSibling();
                 UiFactory.SetLayerRecursively(desktopIconsRoot, Constants.UiLayer);
                 UiFactory.SetLayerRecursively(startMenu, Constants.UiLayer);
@@ -361,7 +396,8 @@ internal sealed class DesktopShell : IDisposable
                 programCount++;
         }
 
-        float menuHeight = 70f + (programCount * 36f) + 82f;
+        float listHeight = Mathf.Min(288f, Mathf.Max(36f, programCount * 36f));
+        float menuHeight = 140f + listHeight;
         GameObject menu = UiFactory.CreatePanel(
             _root.transform,
             "StartMenu",
@@ -370,7 +406,7 @@ internal sealed class DesktopShell : IDisposable
         menuRect.anchorMin = new Vector2(0f, 0f);
         menuRect.anchorMax = new Vector2(0f, 0f);
         menuRect.pivot = new Vector2(0f, 0f);
-        menuRect.sizeDelta = new Vector2(226f, menuHeight);
+        menuRect.sizeDelta = new Vector2(246f, menuHeight);
         menuRect.anchoredPosition = new Vector2(8f, 50f);
 
         S1Text title = UiFactory.CreateText(
@@ -387,6 +423,46 @@ internal sealed class DesktopShell : IDisposable
         title.rectTransform.sizeDelta = new Vector2(-24f, 34f);
         title.rectTransform.anchoredPosition = new Vector2(0f, -12f);
 
+        GameObject viewport = UiFactory.CreatePanel(menu.transform, "ProgramsViewport", Color.clear);
+        RectTransform viewportRect = viewport.GetComponent<RectTransform>();
+        viewportRect.anchorMin = new Vector2(0f, 1f);
+        viewportRect.anchorMax = Vector2.one;
+        viewportRect.pivot = new Vector2(0.5f, 1f);
+        viewportRect.sizeDelta = new Vector2(-32f, listHeight);
+        viewportRect.anchoredPosition = new Vector2(-4f, -48f);
+        viewport.AddComponent<RectMask2D>();
+        GameObject content = new("Programs");
+        content.transform.SetParent(viewport.transform, false);
+        RectTransform contentRect = content.AddComponent<RectTransform>();
+        contentRect.anchorMin = new Vector2(0f, 1f);
+        contentRect.anchorMax = Vector2.one;
+        contentRect.pivot = new Vector2(0.5f, 1f);
+        contentRect.sizeDelta = new Vector2(0f, programCount * 36f);
+        var scroll = viewport.AddComponent<ScrollRect>();
+        scroll.viewport = viewportRect;
+        scroll.content = contentRect;
+        scroll.horizontal = false;
+        scroll.vertical = true;
+        scroll.movementType = ScrollRect.MovementType.Clamped;
+        scroll.scrollSensitivity = 24f;
+        scroll.inertia = false;
+
+        GameObject track = UiFactory.CreatePanel(menu.transform, "ProgramsScrollbar", UiFactory.SurfaceInset);
+        RectTransform trackRect = track.GetComponent<RectTransform>();
+        trackRect.anchorMin = Vector2.one;
+        trackRect.anchorMax = Vector2.one;
+        trackRect.pivot = Vector2.one;
+        trackRect.sizeDelta = new Vector2(12f, listHeight);
+        trackRect.anchoredPosition = new Vector2(-8f, -48f);
+        GameObject thumb = UiFactory.CreatePanel(track.transform, "Handle", UiFactory.SurfaceRaised);
+        UiFactory.Stretch(thumb.GetComponent<RectTransform>(), Vector2.zero);
+        var scrollbar = track.AddComponent<Scrollbar>();
+        scrollbar.handleRect = thumb.GetComponent<RectTransform>();
+        scrollbar.targetGraphic = thumb.GetComponent<Image>();
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        scroll.verticalScrollbar = scrollbar;
+        scroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
+
         int programIndex = 0;
         for (int index = 0; index < descriptors.Count; index++)
         {
@@ -394,12 +470,13 @@ internal sealed class DesktopShell : IDisposable
             if (string.Equals(descriptor.Id, Constants.SettingsAppId, StringComparison.Ordinal))
                 continue;
             Button entry = CreateStartEntry(
-                menu.transform,
+                content.transform,
                 descriptor.Title,
-                menuHeight - 58f - (programIndex++ * 36f),
+                programCount * 36f - 18f - (programIndex++ * 36f),
                 () => OpenApp(descriptor.Id),
                 reserveIconSpace: true);
             AddStartEntryIcon(entry.transform, descriptor);
+            entry.GetComponent<RectTransform>().sizeDelta = new Vector2(0f, 34f);
         }
 
         if (settings != null)
@@ -447,6 +524,13 @@ internal sealed class DesktopShell : IDisposable
             buttonLabel.alignment = GetLeftAlignment();
             buttonLabel.rectTransform.offsetMin = new Vector2(44f, 3f);
         }
+#if IL2CPPMELON
+        buttonLabel.textWrappingMode = Il2CppTMPro.TextWrappingModes.NoWrap;
+        buttonLabel.overflowMode = Il2CppTMPro.TextOverflowModes.Ellipsis;
+#else
+        buttonLabel.textWrappingMode = TMPro.TextWrappingModes.NoWrap;
+        buttonLabel.overflowMode = TMPro.TextOverflowModes.Ellipsis;
+#endif
         _surfaceListeners.Add(action, button.onClick);
         return button;
     }
@@ -496,6 +580,7 @@ internal sealed class DesktopShell : IDisposable
         VirtualFileSystemNode node,
         DesktopAppDescriptor? descriptor,
         Vector2 position,
+        DesktopIconLayout layout,
         Action action)
     {
         GameObject iconObject = UiFactory.CreatePanel(
@@ -506,7 +591,7 @@ internal sealed class DesktopShell : IDisposable
         iconRect.anchorMin = new Vector2(0f, 1f);
         iconRect.anchorMax = new Vector2(0f, 1f);
         iconRect.pivot = new Vector2(0.5f, 1f);
-        iconRect.sizeDelta = new Vector2(84f, 84f);
+        iconRect.sizeDelta = new Vector2(layout.CellWidth - 8f, layout.CellHeight - 4f);
         iconRect.anchoredPosition = position;
 
         Image targetImage = iconObject.GetComponent<Image>();
@@ -528,7 +613,7 @@ internal sealed class DesktopShell : IDisposable
         iconFrameRect.anchorMin = new Vector2(0.5f, 1f);
         iconFrameRect.anchorMax = new Vector2(0.5f, 1f);
         iconFrameRect.pivot = new Vector2(0.5f, 1f);
-        iconFrameRect.sizeDelta = new Vector2(42f, 42f);
+        iconFrameRect.sizeDelta = new Vector2(layout.IconSize, layout.IconSize);
         iconFrameRect.anchoredPosition = new Vector2(0f, -4f);
 
         Sprite icon = node.Kind == VirtualFileSystemNodeKind.Directory
@@ -566,8 +651,13 @@ internal sealed class DesktopShell : IDisposable
         caption.rectTransform.anchorMin = new Vector2(0f, 0f);
         caption.rectTransform.anchorMax = new Vector2(1f, 0f);
         caption.rectTransform.pivot = new Vector2(0.5f, 0f);
-        caption.rectTransform.sizeDelta = new Vector2(0f, 26f);
-        caption.rectTransform.anchoredPosition = new Vector2(0f, 6f);
+        caption.rectTransform.sizeDelta = new Vector2(-4f, 30f);
+        caption.rectTransform.anchoredPosition = new Vector2(0f, 0f);
+#if IL2CPPMELON
+        caption.overflowMode = Il2CppTMPro.TextOverflowModes.Ellipsis;
+#else
+        caption.overflowMode = TMPro.TextOverflowModes.Ellipsis;
+#endif
 
         _surfaceListeners.Add(action, button.onClick);
     }
@@ -627,9 +717,13 @@ internal sealed class DesktopShell : IDisposable
             return;
 
         _desktopIconsRoot = new GameObject("DesktopIcons");
-        _desktopIconsRoot.transform.SetParent(_root.transform, false);
+        _desktopIconsRoot.transform.SetParent(_iconViewport, false);
         RectTransform desktopIconsRect = _desktopIconsRoot.AddComponent<RectTransform>();
-        UiFactory.Stretch(desktopIconsRect, Vector2.zero);
+        desktopIconsRect.anchorMin = Vector2.zero;
+        desktopIconsRect.anchorMax = new Vector2(0f, 1f);
+        desktopIconsRect.pivot = new Vector2(0f, 1f);
+        desktopIconsRect.sizeDelta = new Vector2(DesktopIconLayout.DesktopWidth, 0f);
+        _iconScroll.content = desktopIconsRect;
     }
 
     private void ClearDesktopIconChildren()
@@ -643,13 +737,6 @@ internal sealed class DesktopShell : IDisposable
             child.SetParent(null, false);
             UnityEngine.Object.Destroy(child.gameObject);
         }
-    }
-
-    private static Vector2 GetIconPosition(int index)
-    {
-        int column = index / 5;
-        int row = index % 5;
-        return new Vector2(56f + (column * 98f), -18f - (row * 92f));
     }
 
     private static void ClearEventSystemSelection()

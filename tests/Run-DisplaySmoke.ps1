@@ -100,7 +100,7 @@ try {
         "-screen-width", "1280",
         "-screen-height", "720"
     )
-    $launchedProcess = Start-Process -FilePath $exePath -ArgumentList $arguments -WorkingDirectory $GamePath -PassThru -WindowStyle Normal
+    $launchedProcess = Start-Process -FilePath $exePath -ArgumentList $arguments -WorkingDirectory $GamePath -PassThru -WindowStyle Hidden
     $resultPath = Join-Path $outputDir "result.txt"
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     while ((Get-Date) -lt $deadline) {

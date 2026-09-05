@@ -32,3 +32,5 @@ The mod builds its model and UI at runtime. Do not commit Schedule I assets, ass
 7. Keep raw screenshots and smoke evidence outside the repository unless a curated documentation image is part of the change.
 
 Pull requests should link the issue, explain the user-visible result and trade-offs, list exact validation, and include screenshots for UI work.
+
+For GitHub screenshot attachments, prefer native `gh pr create/edit --attach <image>` (or the corresponding issue/comment command). Check the resolved CLI's version and help for support before considering browser uploads. Keep raw captures outside Git and verify the published attachment URLs. Browser/computer upload is a last resort after supported CLI/API options are unavailable.
