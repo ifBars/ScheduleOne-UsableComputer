@@ -1,174 +1,111 @@
 # Usable Computer
 
-A placeable, working computer for Schedule I with an XP-inspired desktop, native game apps, Lua scripting, Doom, and Schedule I running inside itself.
+**Your very legitimate business needs a computer.**
 
-![Usable Computer desktop](docs/images/desktop.png)
+A working, placeable computer for Schedule I. Check your products, keep notes, write a little app, or play Schedule I inside Schedule I. All from an XP-inspired desktop on a CRT.
 
-Usable Computer builds its furniture model at runtime from the game's laundering-station table and old computer. The desktop, icons, wallpaper, windows, and app UI are also created in code. There is no prefab bundle or embedded copy of the game's assets.
+[Install](#install) · [Take a look](#make-yourself-at-home) · [Make an app](#make-an-app) · [Development](docs/development.md) · [Report a bug](https://github.com/ifBars/ScheduleOne-UsableComputer/issues)
 
-## What it does
+![Usable Computer's desktop on an in-world CRT, with app icons and a rolling-hills wallpaper](docs/images/desktop.png)
 
-- Adds a 4x2 computer desk to both hardware shops for $750.
-- Opens through the game's normal interaction flow with a close-up camera and proper input cleanup.
-- Includes Files, Notes, Calculator, Journal, Product Manager, Settings, App Studio, Doom, and Schedule I apps.
-- Reuses live phone icons and product images for native integrations without cloning the phone UI.
-- Supports movable, minimizable, maximizable, and closable desktop windows.
-- Includes persistent light and dark themes plus three independently selected desktop backgrounds.
-- Offers Small, Medium, and Large desktop icons, with automatic ordering by name or folders first.
-- Keeps the Start menu program list scrollable, with Settings and Power off always available.
-- Lets C# mods register apps through a small public API.
-- Lets players write and save sandboxed Lua apps from App Studio.
-- Includes a sandboxed per-save virtual filesystem for desktop folders and app shortcuts.
-- Supports both Mono and IL2CPP builds.
+Buy the **$750 computer desk** from either hardware shop, place it in a **4×2 space**, and interact with it to open the desktop.
 
-## Screenshots
+> [!NOTE]
+> There isn't a packaged release yet. Installation currently requires building from source. Both Mono and IL2CPP are supported.
 
-| Product Manager | App Studio |
+## Make yourself at home
+
+Move windows around, minimize them to the taskbar, or maximize an app when you need the space. Pick a light or dark theme, one of three wallpapers, and Small, Medium, or Large icons.
+
+| Pick your desktop | Find your programs |
 | --- | --- |
-| ![Product Manager using discovered product icons](docs/images/product-manager.png) | ![App Studio in dark mode](docs/images/app-studio.png) |
+| ![Settings with theme, wallpaper, icon size, and ordering controls](docs/images/settings.png) | ![Start menu with its program list and fixed Settings and Power off actions](docs/images/start-menu.png) |
+| Appearance settings survive restarts. Changing the theme keeps your wallpaper. | The program list scrolls; Settings and Power off stay within reach. |
 
-### Schedule I inside Schedule I
+Arrange icons by name or put folders first. Files lets you create and rename folders, move app shortcuts, and delete empty folders. Folders belong to your save; appearance preferences and Notes are shared across saves. When the desktop fills up, scroll horizontally to reach the rest.
 
-![A nested Schedule I instance running inside the computer](docs/images/nested-schedule-one.png)
+The close-up view stays centered on the screen as you resize the game.
 
-The Schedule I app launches a second game process and streams its Unity cameras into the desktop window. The child runs with an isolated MelonLoader setup and a separate save profile, so it cannot open the outer game's active save by accident.
+## Get some work done
 
-This feature is Windows-only and runs two complete game instances. Expect a meaningful CPU, GPU, and memory cost. Click the nested game to control it, press `F10` to return to the desktop, and save before pressing Stop.
+| App | What you can do |
+| --- | --- |
+| **Products** | Browse discovered products, their art and values, and their listing and favourite state. |
+| **Journal** | View and track your quests. |
+| **Notes** | Keep a persistent scratchpad. |
+| **Calculator** | Work out the numbers without leaving the desk. |
+| **Files** | Organize folders and app shortcuts. |
+| **App Studio** | Write Lua apps and load them without restarting. |
 
-### Display size and rendering cost
+![Product Manager open on the computer](docs/images/product-manager.png)
 
-The runtime model is 15% larger than the laundering-station donor, while its 4x2 placement footprint and collision setup stay unchanged. Interaction centers the view on the physical screen. It uses a 55-degree field of view at 16:9 and wider aspect ratios, and widens the view for narrower windows so the screen remains visible. Resizing while the computer is open updates the view automatically.
-
-Nested Schedule I renders at 960x540. Each uncompressed RGBA frame is about 2.0 MiB, compared with 0.9 MiB at the previous 640x360 setting. This is 2.25 times as many pixels per capture, but remains below the bridge's existing 1280x720 capacity.
-
-## Requirements
-
-- Schedule I
-- [MelonLoader](https://github.com/LavaGang/MelonLoader)
-- A matching [S1API](https://github.com/ifBars/S1API) build
-- The Mono build for the alternate Steam branch, or the IL2CPP build for the normal public branch
-
-There is not a packaged release yet. The project can be built and installed locally using the steps below.
-
-## Build and install
-
-Copy [`local.build.props.example`](local.build.props.example) to `local.build.props` and set the paths for both game runtimes and your local S1API builds. The local file is ignored by git because it contains machine-specific paths.
-
-```powershell
-dotnet build UsableComputer.csproj -c Mono
-dotnet build UsableComputer.csproj -c Il2cpp
-```
-
-Install the matching build output like this:
-
-```text
-Mods/
-  UsableComputer_Mono.dll or UsableComputer_Il2cpp.dll
-
-UserLibs/
-  ManagedDoom.Core.dll
-  MoonSharp.Interpreter.dll
-  UsableComputer.ChildHost.dll
-```
-
-Set `AutomateLocalDeployment=true` in `local.build.props` if you want builds copied to your configured game installations. It is disabled by default.
-
-## Built-in apps
-
-Journal and Product Manager read the native game state through narrow adapters. Journal can track quests, while Product Manager displays discovered product art, values, listing state, and favourite state. Neither app reparents or drives the phone canvas.
-
-Notes persist through MelonPreferences. Appearance settings also persist, with theme and background stored separately so switching light or dark mode does not replace the wallpaper.
-
-In Settings, choose a desktop icon size and select **Arrange by name** or **Folders first**. The chosen order is maintained as apps and folders change, with stable node IDs breaking ties between equal names. Size and ordering preferences are shared by all computers and survive game and save reloads. Overflowing desktops have a horizontal scrollbar; long icon labels are shortened to fit their clickable cells. The Start menu program list supports mouse-wheel scrolling and a scrollbar independently of its fixed footer.
-
-Files organizes the desktop through a virtual filesystem stored with the active Schedule I save. Create and rename folders from the Files app, then cut and paste app shortcuts between folders. Empty folders can be deleted. Virtual paths never map to arbitrary files on the host computer, and unavailable mod-app shortcuts remain in place so they recover if the app is installed again.
+## Get absolutely no work done
 
 ### Doom
 
-Doom uses the vendored [Managed Doom](https://github.com/sinshu/managed-doom) engine. The mod does not include game data. Add an IWAD you own, or a compatible free IWAD such as [Freedoom](https://github.com/freedoom/freedoom), to:
+Drop an IWAD you own, or a free [Freedoom](https://github.com/freedoom/freedoom) IWAD, into `UserData/UsableComputer/Doom`, then open Doom.
 
-```text
-UserData/UsableComputer/Doom
-```
+Supported filenames: `doom.wad`, `doom1.wad`, `doom2.wad`, `freedoom1.wad`, and `freedoom2.wad`. Game data isn't included, and audio isn't implemented yet. Press **F10** to release the game's input.
 
-Recognized names are `doom.wad`, `doom1.wad`, `doom2.wad`, `freedoom1.wad`, and `freedoom2.wad`. Press `F10` to release Doom's input. Audio is not implemented yet.
+### Schedule I inside Schedule I
 
-### Lua apps
+![A second Schedule I instance running in a desktop window on the in-game computer](docs/images/nested-schedule-one.png)
 
-App Studio saves Lua apps to `UserData/UsableComputer/Apps` and hot-loads them without restarting the game. Scripts can read player, money, property, employee, product, and quest data through a small S1API-backed surface.
+The Schedule I app launches a second game instance and streams it into a desktop window. It uses a separate save profile and isolated MelonLoader setup to keep it apart from your outer game.
 
-```lua
-return {
-  id = "business-dashboard",
-  title = "Business Dashboard",
-  icon = "studio",
+**Windows only.** This runs two complete games, with the CPU, GPU, and memory cost that implies. Click inside to take control, press **F10** to return to the desktop, and save before pressing **Stop**.
 
-  render = function()
-    local money = computer.money()
+## Install
 
-    return {
-      { kind = "heading", text = "Business Dashboard" },
-      { kind = "stat", label = "Cash", value = computer.currency(money.cash) },
-      { kind = "stat", label = "Bank", value = computer.currency(money.online) },
-    }
-  end
-}
-```
+You'll need Schedule I, [MelonLoader](https://github.com/LavaGang/MelonLoader), a matching [S1API](https://github.com/ifBars/S1API) build, and the .NET SDK.
 
-Lua apps cannot access the filesystem, operating system, CLR, Unity objects, or raw S1API types. Source is limited to 64 KiB, rendered output is limited to 64 rows, and each invocation has a 250 ms execution budget.
+1. Clone this repository and copy [`local.build.props.example`](local.build.props.example) to `local.build.props`.
+2. Set the paths to your game installations and local S1API builds in that file.
+3. Build the configuration that matches your game:
 
-## Add a C# app
+   | Steam branch | Build command | Output directory |
+   | --- | --- | --- |
+   | Alternate / Mono | `dotnet build UsableComputer.csproj -c Mono` | `bin/Mono/netstandard2.1/` |
+   | Public / IL2CPP | `dotnet build UsableComputer.csproj -c Il2cpp` | `bin/Il2cpp/net6.0/` |
 
-Mods can reference `UsableComputer.dll` and register an app without depending on runtime-specific TextMeshPro or Schedule I types:
+4. Copy the matching mod DLL and its companion libraries from the output directory into your game installation:
 
-```csharp
-using UsableComputer.API;
-using UnityEngine;
+   ```text
+   Mods/
+     UsableComputer_Mono.dll OR UsableComputer_Il2cpp.dll
 
-DesktopAppRegistry.Register(new DesktopAppDescriptor(
-    id: "my-mod.app",
-    title: "My App",
-    glyph: "M",
-    preferredWindowSize: new Vector2(440f, 300f),
-    preferredWindowPosition: Vector2.zero,
-    createSession: context => new MyDesktopSession(context)));
-```
+   UserLibs/
+     ManagedDoom.Core.dll
+     MoonSharp.Interpreter.dll
+     UsableComputer.ChildHost.dll
+   ```
 
-Each window gets its own `IDesktopAppSession`. Apps registered after the computer opens appear immediately, and unregistering an app closes its windows and disposes its sessions. See [`examples/ManualDesktopAppSample`](examples/ManualDesktopAppSample) for a complete buildable example.
+Install only the mod DLL for your runtime. Keep the matching S1API installation alongside it. To deploy future builds automatically, set `AutomateLocalDeployment=true` in `local.build.props`; it is off by default.
 
-## Development
+## Make an app
 
-The focused verifiers cover the calculator model, app registry, virtual filesystem, Lua host, and Doom adapter without starting Unity:
+App Studio saves scripts to `UserData/UsableComputer/Apps` and hot-loads them. Build a dashboard from player, money, property, employee, product, and quest data.
 
-```powershell
-dotnet run --project tests\UsableComputer.CalculatorModelVerifier\UsableComputer.CalculatorModelVerifier.csproj -c Release
-dotnet run --project tests\UsableComputer.RegistryVerifier\UsableComputer.RegistryVerifier.csproj -c Release
-dotnet run --project tests\UsableComputer.FileSystemVerifier\UsableComputer.FileSystemVerifier.csproj -c Release
-dotnet run --project tests\UsableComputer.LuaVerifier\UsableComputer.LuaVerifier.csproj -c Release
-dotnet run --project tests\UsableComputer.DoomVerifier\UsableComputer.DoomVerifier.csproj -c Release -- C:\path\to\an\iwad.wad
-```
+![App Studio editing a Lua dashboard, with Save & run below the code](docs/images/app-studio.png)
 
-Camera and display changes have a Mono smoke test that isolates the target install's mod directory, loads a disposable save copy, and captures the physical computer:
+Lua runs in a sandbox: no operating-system access, arbitrary files, CLR, or raw Unity objects. Each invocation has a 250 ms budget, with a 64 KiB source limit and up to 64 rendered rows.
 
-```powershell
-.\tests\Run-DisplaySmoke.ps1 -GamePath C:\path\to\Schedule-I -SourceSavePath C:\path\to\SaveGame
-```
+**[Write your first Lua app or register a C# app →](docs/app-development.md)**
 
-The VFS smoke runner builds an isolated test mod, copies a completed save into a temporary fixture, proves persistence across two game processes, captures the Files window, and restores the target install afterward:
+C# mods can add apps through the public registry. Each window owns its own session; registration updates the desktop immediately. A [buildable sample mod](examples/ManualDesktopAppSample) is included.
 
-```powershell
-.\tests\Run-VfsSmoke.ps1 -Runtime Mono -GamePath C:\path\to\ScheduleI -SourceSavePath C:\path\to\SaveGame_1
-.\tests\Run-VfsSmoke.ps1 -Runtime Il2cpp -GamePath C:\path\to\ScheduleI -SourceSavePath C:\path\to\SaveGame_1
-```
+## Contributing
 
-Pure verifier passes do not replace an in-game test. Test the matching build in a backed-up or disposable save before release.
+Found a bug or have an app idea? [Open an issue](https://github.com/ifBars/ScheduleOne-UsableComputer/issues). For bugs, include your runtime, what you did, and what happened. A screenshot helps with desktop or camera problems.
 
-Open work is tracked in [GitHub Issues](https://github.com/ifBars/ScheduleOne-UsableComputer/issues).
+For code changes, start with the [contributor guide](AGENTS.md), [coding standards](CODING_STANDARDS.md), and [development and testing guide](docs/development.md).
 
-## License and game assets
+## Credits and license
 
-Usable Computer is licensed under GPL-2.0-or-later because it includes Managed Doom. MoonSharp remains under its BSD license. See [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md) and the vendored license files for attribution and terms.
+Built with [S1API](https://github.com/ifBars/S1API), [Managed Doom](https://github.com/sinshu/managed-doom), and [MoonSharp](https://www.moonsharp.org/).
 
-No Schedule I assemblies, decompiled code, AssetRipper exports, prefabs, textures, scenes, executable files, or generated IL2CPP wrappers are included. Native game models and sprites are resolved from the player's installed copy at runtime.
+Usable Computer is **GPL-2.0-or-later** because it includes Managed Doom. MoonSharp retains its BSD license. See [third-party notices](THIRD_PARTY_NOTICES.md) and the vendored licenses for details.
 
-This is an unofficial community mod and is not affiliated with or endorsed by TVGS.
+Game models and sprites come from the player's installed copy at runtime. This repository doesn't distribute Schedule I assets or assemblies.
+
+An unofficial community mod, not affiliated with or endorsed by TVGS.
