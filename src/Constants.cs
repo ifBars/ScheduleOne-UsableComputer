@@ -30,6 +30,8 @@ internal static class Constants
     internal const string NotePreferenceKey = "GlobalNote";
     internal const string ThemePreferenceKey = "DesktopTheme";
     internal const string WallpaperPreferenceKey = "DesktopWallpaper";
+    internal const string IconSizePreferenceKey = "DesktopIconSize";
+    internal const string IconOrderPreferenceKey = "DesktopIconOrder";
     internal const string HardwareShop = "Handy Hank's Hardware";
     internal const string DanHardwareShop = "Dan's Hardware";
     internal const int UiLayer = 5;

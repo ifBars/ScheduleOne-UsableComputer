@@ -292,8 +292,8 @@ internal static class UiFactory
     internal static void SetLayerRecursively(GameObject root, int layer)
     {
         root.layer = layer;
-        foreach (Transform child in root.transform)
-            SetLayerRecursively(child.gameObject, layer);
+        for (int index = 0; index < root.transform.childCount; index++)
+            SetLayerRecursively(root.transform.GetChild(index).gameObject, layer);
     }
 
     internal static void ApplyTheme(GameObject root, DesktopTheme previousTheme, DesktopTheme nextTheme)

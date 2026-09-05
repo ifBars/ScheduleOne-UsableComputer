@@ -14,6 +14,8 @@ Usable Computer builds its furniture model at runtime from the game's laundering
 - Reuses live phone icons and product images for native integrations without cloning the phone UI.
 - Supports movable, minimizable, maximizable, and closable desktop windows.
 - Includes persistent light and dark themes plus three independently selected desktop backgrounds.
+- Offers Small, Medium, and Large desktop icons, with automatic ordering by name or folders first.
+- Keeps the Start menu program list scrollable, with Settings and Power off always available.
 - Lets C# mods register apps through a small public API.
 - Lets players write and save sandboxed Lua apps from App Studio.
 - Includes a sandboxed per-save virtual filesystem for desktop folders and app shortcuts.
@@ -35,7 +37,7 @@ This feature is Windows-only and runs two complete game instances. Expect a mean
 
 ### Display size and rendering cost
 
-The runtime model is 15% larger than the laundering-station donor, while its 4x2 placement footprint and collision setup stay unchanged. Interaction uses a 55-degree field of view so text occupies more of the screen without moving the camera into the bezel.
+The runtime model is 15% larger than the laundering-station donor, while its 4x2 placement footprint and collision setup stay unchanged. Interaction centers the view on the physical screen. It uses a 55-degree field of view at 16:9 and wider aspect ratios, and widens the view for narrower windows so the screen remains visible. Resizing while the computer is open updates the view automatically.
 
 Nested Schedule I renders at 960x540. Each uncompressed RGBA frame is about 2.0 MiB, compared with 0.9 MiB at the previous 640x360 setting. This is 2.25 times as many pixels per capture, but remains below the bridge's existing 1280x720 capacity.
 
@@ -76,6 +78,8 @@ Set `AutomateLocalDeployment=true` in `local.build.props` if you want builds cop
 Journal and Product Manager read the native game state through narrow adapters. Journal can track quests, while Product Manager displays discovered product art, values, listing state, and favourite state. Neither app reparents or drives the phone canvas.
 
 Notes persist through MelonPreferences. Appearance settings also persist, with theme and background stored separately so switching light or dark mode does not replace the wallpaper.
+
+In Settings, choose a desktop icon size and select **Arrange by name** or **Folders first**. The chosen order is maintained as apps and folders change, with stable node IDs breaking ties between equal names. Size and ordering preferences are shared by all computers and survive game and save reloads. Overflowing desktops have a horizontal scrollbar; long icon labels are shortened to fit their clickable cells. The Start menu program list supports mouse-wheel scrolling and a scrollbar independently of its fixed footer.
 
 Files organizes the desktop through a virtual filesystem stored with the active Schedule I save. Create and rename folders from the Files app, then cut and paste app shortcuts between folders. Empty folders can be deleted. Virtual paths never map to arbitrary files on the host computer, and unavailable mod-app shortcuts remain in place so they recover if the app is installed again.
 

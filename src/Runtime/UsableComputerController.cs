@@ -56,6 +56,7 @@ internal sealed class UsableComputerController : IDisposable
     private bool _isReady;
     private bool _disposed;
     private float _nextInitializationAttempt;
+    private float _viewAspect;
 
     internal UsableComputerController(GameObject builtObject)
     {
@@ -90,6 +91,10 @@ internal sealed class UsableComputerController : IDisposable
             _nextInitializationAttempt = unscaledTime + 1f;
             TryInitialize();
         }
+
+        if (_isOpen && _playerCamera != null && _playerCamera.Camera != null &&
+            Math.Abs(_playerCamera.Camera.aspect - _viewAspect) > 0.001f)
+            UpdateInteractionView(0f);
 
         _desktop?.Tick();
     }
@@ -171,13 +176,7 @@ internal sealed class UsableComputerController : IDisposable
         {
             _interactable?.SetInteractableState(S1Interactable.EInteractableState.Disabled);
 
-            _playerCamera.OverrideTransform(
-                _cameraAnchor.position,
-                _cameraAnchor.rotation,
-                Constants.CameraTransitionSeconds);
-            _cameraOverridden = true;
-            _playerCamera.OverrideFOV(DisplayProfile.InteractionFieldOfView, Constants.CameraTransitionSeconds);
-            _fovOverridden = true;
+            UpdateInteractionView(Constants.CameraTransitionSeconds);
 
             _playerCamera.AddActiveUIElement(_interactionToken);
             _uiElementActive = true;
@@ -201,6 +200,18 @@ internal sealed class UsableComputerController : IDisposable
             MelonLoader.MelonLogger.Error($"[{Constants.ModName}] Could not open computer: {exception}");
             Close();
         }
+    }
+
+    private void UpdateInteractionView(float transitionSeconds)
+    {
+        if (_playerCamera == null || _cameraAnchor == null || _screenAnchor == null)
+            return;
+        _viewAspect = _playerCamera.Camera.aspect;
+        Quaternion rotation = Quaternion.LookRotation(_screenAnchor.position - _cameraAnchor.position, _screenAnchor.up);
+        _playerCamera.OverrideTransform(_cameraAnchor.position, rotation, transitionSeconds);
+        _cameraOverridden = true;
+        _playerCamera.OverrideFOV(DisplayProfile.GetInteractionFieldOfView(_viewAspect), transitionSeconds);
+        _fovOverridden = true;
     }
 
     internal void Close()

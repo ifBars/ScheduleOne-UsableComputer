@@ -9,7 +9,8 @@ param(
     [string]$SourceSavePath,
     [string]$OutputRoot = "",
     [ValidateRange(60, 600)]
-    [int]$TimeoutSeconds = 180
+    [int]$TimeoutSeconds = 180,
+    [switch]$IconLayout
 )
 
 $ErrorActionPreference = "Stop"
@@ -100,7 +101,8 @@ function Invoke-SmokePhase([string]$Phase) {
         "-screen-width", "1280",
         "-screen-height", "720"
     )
-    $script:launchedProcess = Start-Process -FilePath $exePath -ArgumentList $arguments -WorkingDirectory $GamePath -PassThru -WindowStyle Normal
+    if ($IconLayout) { $arguments += "--usable-computer-icon-layout-smoke" }
+    $script:launchedProcess = Start-Process -FilePath $exePath -ArgumentList $arguments -WorkingDirectory $GamePath -PassThru -WindowStyle Hidden
     $timeline.Add("LAUNCH|Runtime=$Runtime|Phase=$Phase|PID=$($script:launchedProcess.Id)")
 
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
@@ -116,6 +118,9 @@ function Invoke-SmokePhase([string]$Phase) {
 
     if (Test-Path -LiteralPath $logPath) {
         Copy-Item -LiteralPath $logPath -Destination (Join-Path $phaseDirectory "Latest.log") -Force
+        if (Select-String -LiteralPath $logPath -Pattern 'Could not open desktop app|Desktop app registry listener failed' -Quiet) {
+            throw "Desktop UI failure was logged during $Runtime $Phase; inspect $phaseDirectory/Latest.log"
+        }
     }
     $result = if (Test-Path -LiteralPath $resultPath) {
         Get-Content -Raw -LiteralPath $resultPath
@@ -145,6 +150,13 @@ function Invoke-SmokePhase([string]$Phase) {
 }
 
 try {
+    if ($IconLayout) {
+        $preferencesPath = Get-ContainedPath (Join-Path $GamePath "UserData/MelonPreferences.cfg") $GamePath "Preferences"
+        $preferencesBackup = Join-Path $backupDir "MelonPreferences.cfg"
+        $preferencesExisted = Test-Path -LiteralPath $preferencesPath
+        if ($preferencesExisted) { Copy-Item -LiteralPath $preferencesPath -Destination $preferencesBackup }
+        $userLibMutations += [pscustomobject]@{ Target=$preferencesPath; Backup=$preferencesBackup; Existed=$preferencesExisted }
+    }
     $timeline.Add("BUILD|Runtime=$Runtime|Started=$(Get-Date -Format o)")
     & dotnet build (Join-Path $repoRoot "UsableComputer.csproj") -c $configuration -t:Rebuild -p:AutomateLocalDeployment=false -v:q
     if ($LASTEXITCODE -ne 0) { throw "Usable Computer $Runtime rebuild failed" }
