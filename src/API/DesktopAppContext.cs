@@ -15,6 +15,7 @@ public sealed class DesktopAppContext
     private readonly List<Action> _cleanupActions = new();
     private readonly Action _requestClose;
     private readonly Action<string> _requestOpenApp;
+    private readonly Action<string> _requestOpenFile;
     private readonly Action<bool> _setTyping;
     private bool _disposed;
 
@@ -25,7 +26,8 @@ public sealed class DesktopAppContext
         UiListenerRegistry listeners,
         Action requestClose,
         Action<string> requestOpenApp,
-        Action<bool> setTyping)
+        Action<bool> setTyping,
+        Action<string> requestOpenFile)
     {
         Container = container ?? throw new ArgumentNullException(nameof(container));
         Content = content ?? throw new ArgumentNullException(nameof(content));
@@ -34,6 +36,7 @@ public sealed class DesktopAppContext
         _requestClose = requestClose ?? throw new ArgumentNullException(nameof(requestClose));
         _requestOpenApp = requestOpenApp ?? throw new ArgumentNullException(nameof(requestOpenApp));
         _setTyping = setTyping ?? throw new ArgumentNullException(nameof(setTyping));
+        _requestOpenFile = requestOpenFile ?? throw new ArgumentNullException(nameof(requestOpenFile));
     }
 
     public Transform Container { get; }
@@ -105,6 +108,13 @@ public sealed class DesktopAppContext
             return;
 
         _setTyping(typing);
+    }
+
+    /// <summary>Opens a virtual text file in Notes using its stable node ID.</summary>
+    public void OpenFile(string fileId)
+    {
+        ThrowIfDisposed();
+        _requestOpenFile(fileId);
     }
 
     internal UiListenerRegistry Listeners => _listeners;

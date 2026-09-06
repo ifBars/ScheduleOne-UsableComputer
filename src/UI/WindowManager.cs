@@ -155,6 +155,17 @@ internal sealed class WindowManager : IDisposable
         _requestOpenApp(appId);
     }
 
+    internal void OpenFile(string fileId)
+    {
+        _requestOpenApp(Constants.NotesAppId);
+        foreach (DesktopWindow window in _windows)
+            if (window.AppId == Constants.NotesAppId)
+            {
+                window.OpenFile(fileId);
+                return;
+            }
+    }
+
     internal void Remove(DesktopWindow window)
     {
         if (!_windows.Remove(window))
@@ -256,7 +267,8 @@ internal sealed class DesktopWindow : IDisposable
             _listeners,
             Close,
             _manager.RequestOpenApp,
-            value => S1GameInput.IsTyping = value);
+            value => S1GameInput.IsTyping = value,
+            _manager.OpenFile);
         IDesktopAppSession? createdSession = _descriptor.CreateSession(_context);
         if (createdSession == null)
         {
@@ -318,6 +330,12 @@ internal sealed class DesktopWindow : IDisposable
     {
         if (!_disposed && _session is IDesktopDirectorySession directorySession)
             directorySession.OpenDirectory(directoryId);
+    }
+
+    internal void OpenFile(string fileId)
+    {
+        if (!_disposed && _session is NotesApp notes)
+            notes.OpenFile(fileId);
     }
 
     internal void SetVisible(bool visible)

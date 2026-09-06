@@ -10,6 +10,9 @@ internal static class VirtualFileSystemService
     private static readonly Action RegistryChangedHandler = ReconcileApps;
     private static VirtualFileSystem _fileSystem = new();
     private static bool _initialized;
+    private static NotesDocument? _notes;
+
+    internal static NotesDocument Notes => _notes ??= new NotesDocument(_fileSystem, Commit);
 
     internal static event Action? Changed;
 
@@ -25,6 +28,7 @@ internal static class VirtualFileSystemService
 
     internal static void PrepareForLoad()
     {
+        _notes = null;
         _fileSystem = new VirtualFileSystem();
         ReconcileApps(notify: false);
         UsableComputerFileSystemSave.ResetSnapshot(_fileSystem.CreateSnapshot());
@@ -33,6 +37,7 @@ internal static class VirtualFileSystemService
 
     internal static void Load(VirtualFileSystemSnapshot snapshot)
     {
+        _notes = null;
         try
         {
             _fileSystem = new VirtualFileSystem(snapshot);
@@ -62,6 +67,23 @@ internal static class VirtualFileSystemService
     internal static string GetPath(string nodeId)
     {
         return _fileSystem.GetPath(nodeId);
+    }
+
+    internal static VirtualFileSystemNode ResolvePath(string path) => _fileSystem.ResolvePath(path);
+
+    internal static string ReadText(string nodeId) => _fileSystem.ReadText(nodeId);
+
+    internal static VirtualFileSystemNode CreateTextFile(string parentId, string name, string text)
+    {
+        VirtualFileSystemNode node = _fileSystem.CreateTextFile(parentId, name, text);
+        Commit();
+        return node;
+    }
+
+    internal static void WriteText(string nodeId, string text)
+    {
+        _fileSystem.WriteText(nodeId, text);
+        Commit();
     }
 
     internal static VirtualFileSystemNode CreateDirectory(string parentId, string name)
@@ -101,6 +123,7 @@ internal static class VirtualFileSystemService
 
     internal static void Shutdown()
     {
+        _notes = null;
         if (!_initialized)
             return;
 

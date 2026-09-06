@@ -10,7 +10,8 @@ param(
     [string]$OutputRoot = "",
     [ValidateRange(60, 600)]
     [int]$TimeoutSeconds = 180,
-    [switch]$IconLayout
+    [switch]$IconLayout,
+    [switch]$TextFiles
 )
 
 $ErrorActionPreference = "Stop"
@@ -102,6 +103,7 @@ function Invoke-SmokePhase([string]$Phase) {
         "-screen-height", "720"
     )
     if ($IconLayout) { $arguments += "--usable-computer-icon-layout-smoke" }
+    if ($TextFiles) { $arguments += "--usable-computer-text-files-smoke" }
     $script:launchedProcess = Start-Process -FilePath $exePath -ArgumentList $arguments -WorkingDirectory $GamePath -PassThru -WindowStyle Hidden
     $timeline.Add("LAUNCH|Runtime=$Runtime|Phase=$Phase|PID=$($script:launchedProcess.Id)")
 
@@ -150,7 +152,7 @@ function Invoke-SmokePhase([string]$Phase) {
 }
 
 try {
-    if ($IconLayout) {
+    if ($IconLayout -or $TextFiles) {
         $preferencesPath = Get-ContainedPath (Join-Path $GamePath "UserData/MelonPreferences.cfg") $GamePath "Preferences"
         $preferencesBackup = Join-Path $backupDir "MelonPreferences.cfg"
         $preferencesExisted = Test-Path -LiteralPath $preferencesPath

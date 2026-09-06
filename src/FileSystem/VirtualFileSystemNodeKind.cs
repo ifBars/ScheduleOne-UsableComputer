@@ -4,4 +4,5 @@ internal enum VirtualFileSystemNodeKind
 {
     Directory,
     AppShortcut,
+    File,
 }

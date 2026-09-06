@@ -10,6 +10,8 @@
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
     <Compile Include="Program.cs" />
+    <Compile Include="TextFileTests.cs" />
+    <Compile Include="..\..\src\FileSystem\NotesDocument.cs" Link="NotesDocument.cs" />
     <Compile Include="..\..\src\FileSystem\VirtualFileSystem.cs" Link="VirtualFileSystem.cs" />
     <Compile Include="..\..\src\FileSystem\VirtualFileSystemNode.cs" Link="VirtualFileSystemNode.cs" />
     <Compile Include="..\..\src\FileSystem\VirtualFileSystemNodeKind.cs" Link="VirtualFileSystemNodeKind.cs" />

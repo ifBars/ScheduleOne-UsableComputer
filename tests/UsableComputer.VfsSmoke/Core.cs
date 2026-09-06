@@ -5,6 +5,8 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 #if IL2CPP
+using S1Input = Il2CppTMPro.TMP_InputField;
+using S1Text = Il2CppTMPro.TextMeshProUGUI;
 using Il2CppInterop.Runtime;
 using S1BuildableDefinition = Il2CppScheduleOne.ItemFramework.BuildableItemDefinition;
 using S1DateTime = Il2CppSystem.DateTime;
@@ -15,6 +17,8 @@ using S1SaveInfo = Il2CppScheduleOne.Persistence.SaveInfo;
 using S1SaveManager = Il2CppScheduleOne.Persistence.SaveManager;
 using S1Registry = Il2CppScheduleOne.Registry;
 #else
+using S1Input = TMPro.TMP_InputField;
+using S1Text = TMPro.TextMeshProUGUI;
 using S1BuildableDefinition = ScheduleOne.ItemFramework.BuildableItemDefinition;
 using S1DateTime = System.DateTime;
 using S1DateTimeData = ScheduleOne.Persistence.Datas.DateTimeData;
@@ -49,6 +53,9 @@ public sealed class Core : MelonMod
     private GameObject? _screenAnchor;
     private GameObject? _computerModel;
     private bool _iconLayout;
+    private bool _textFiles;
+    private const string TextFileName = "Shopping list.txt";
+    private const string NoteText = "Shopping list\nMilk\nCoffee\nSave a copy for tomorrow.";
     private IDisposable? _controller;
 
     public override void OnUpdate()
@@ -62,6 +69,7 @@ public sealed class Core : MelonMod
         string[] args = Environment.GetCommandLineArgs();
         _enabled = Array.IndexOf(args, "--usable-computer-vfs-smoke") >= 0;
         _iconLayout = Array.IndexOf(args, "--usable-computer-icon-layout-smoke") >= 0;
+        _textFiles = Array.IndexOf(args, "--usable-computer-text-files-smoke") >= 0;
         if (!_enabled)
             return;
 
@@ -182,6 +190,12 @@ public sealed class Core : MelonMod
         if (_iconLayout)
         {
             yield return RunIconLayoutScenario();
+            if (_completed) yield break;
+        }
+
+        if (_textFiles)
+        {
+            yield return RunTextFilesScenario(folderId);
             if (_completed) yield break;
         }
 
@@ -506,6 +520,104 @@ public sealed class Core : MelonMod
         }
     }
 
+    private IEnumerator RunTextFilesScenario(string folderId)
+    {
+        object service = GetServiceType();
+        string fileId;
+        try
+        {
+            if (_phase == "seed")
+            {
+                _desktop!.GetType().GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(_desktop, new object[] { NotesAppId });
+                GameObject.Find("NoteInput").GetComponent<S1Input>().text = NoteText;
+                GameObject.Find("NotePath").GetComponent<S1Input>().text = "/Desktop/" + TextFileName;
+                ClickNotesButton("Save");
+                object file = FindChild(service, "desktop", TextFileName, null)
+                    ?? throw new InvalidOperationException("Notes Save did not create a text file.");
+                fileId = ReadString(file, "Id");
+                Invoke(service, "Move", fileId, folderId);
+                ClickNotesButton("Save");
+                Require(GameObject.Find("NotePath").GetComponent<S1Input>().text == $"/Desktop/{FolderName}/{TextFileName}",
+                    "Notes did not follow the moved file.");
+            }
+            else
+                fileId = ReadString(FindChild(service, folderId, TextFileName, null)!, "Id");
+
+            // Exercise the Files app's document routing into Notes.
+            object filesSession = GetAppSession("files");
+            filesSession.GetType().GetMethod("Open", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(filesSession, new object[] { fileId });
+            Require(GameObject.Find("NoteInput").GetComponent<S1Input>().text == NoteText,
+                "File Explorer did not open the saved text in Notes.");
+
+            GameObject.Find("NoteInput").GetComponent<S1Input>().text = "Draft retained across window close";
+            object manager = _desktop!.GetType().GetField("_windows", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_desktop)!;
+            manager.GetType().GetMethod("CloseWindow", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(manager, new object[] { NotesAppId });
+        }
+        catch (Exception exception)
+        {
+            Fail("Text file creation or opening failed", Unwrap(exception));
+            yield break;
+        }
+        yield return null;
+        try
+        {
+            _desktop!.GetType().GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(_desktop, new object[] { NotesAppId });
+            Require(GameObject.Find("NoteInput").GetComponent<S1Input>().text == "Draft retained across window close",
+                "Closing Notes lost its draft.");
+            _desktop.GetType().GetMethod("OpenNode", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(_desktop, new object[] { fileId });
+            Require(GameObject.Find("NoteInput").GetComponent<S1Input>().text == "Draft retained across window close",
+                "Opening a file discarded dirty text.");
+            Require(GameObject.Find("NoteStatus").GetComponent<S1Text>().text.Contains("Save your draft"),
+                "Dirty file switching did not explain how to continue.");
+            ClickNotesButton("Discard");
+            _desktop.GetType().GetMethod("OpenNode", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(_desktop, new object[] { fileId });
+            Require(GameObject.Find("NoteInput").GetComponent<S1Input>().text == NoteText,
+                "Desktop did not reopen the document.");
+            Require((string)Invoke(service, "ReadText", fileId)! == NoteText, "Live text content differs from saved note.");
+        }
+        catch (Exception exception)
+        {
+            Fail("Notes draft preservation failed", Unwrap(exception));
+            yield break;
+        }
+
+        Type preferences = GetUsableComputerAssembly().GetType("UsableComputer.PreferencesStore", true)!;
+        MethodInfo setTheme = preferences.GetMethod("SetTheme", BindingFlags.Static | BindingFlags.NonPublic)!;
+        foreach (string theme in new[] { "Dark", "Light" })
+        {
+            setTheme.Invoke(null, new[] { Enum.Parse(setTheme.GetParameters()[0].ParameterType, theme) });
+            yield return new WaitForSecondsRealtime(0.5f);
+            string capture = Path.Combine(_outputDirectory, $"notes-{theme}.png");
+            ScreenCapture.CaptureScreenshot(capture);
+            yield return WaitForCapture(capture);
+            if (_completed) yield break;
+        }
+        LoggerInstance.Msg($"[UsableComputerTextFilesSmoke] PASS Runtime={ConstantsRuntime()} Phase={_phase} Save=True Move=True Open=True Draft=True Themes=2");
+    }
+
+    private object GetAppSession(string appId)
+    {
+        object manager = _desktop!.GetType().GetField("_windows", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_desktop)!;
+        IEnumerable windows = (IEnumerable)manager.GetType().GetField("_windows", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(manager)!;
+        foreach (object window in windows)
+            if ((string)window.GetType().GetProperty("AppId", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)! == appId)
+                return window.GetType().GetField("_session", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+        throw new InvalidOperationException($"No window for {appId}.");
+    }
+
+    private static void ClickNotesButton(string name)
+    {
+        Transform button = GameObject.Find("Window_notes").transform.Find("Content/" + name);
+        Require(button != null, $"Notes button {name} is missing.");
+        button!.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+    }
+
     private string VerifyReloadedVirtualFileSystem()
     {
         object service = GetServiceType();
@@ -513,6 +625,13 @@ public sealed class Core : MelonMod
             ?? throw new InvalidOperationException("Persisted folder was not restored after process reload.");
         string folderId = ReadString(folder, "Id");
         Require(FindChild(service, folderId, name: null, NotesAppId) != null, "Persisted Notes shortcut was not restored inside the folder.");
+        if (_textFiles)
+        {
+            object file = FindChild(service, folderId, TextFileName, null)
+                ?? throw new InvalidOperationException("Text file was not restored after process reload.");
+            Require((string)Invoke(service, "ReadText", ReadString(file, "Id"))! == NoteText,
+                "Persisted text content changed after process reload.");
+        }
         return folderId;
     }
 
@@ -522,6 +641,11 @@ public sealed class Core : MelonMod
         object notes = FindChild(service, folderId, name: null, NotesAppId)
             ?? throw new InvalidOperationException("Notes shortcut disappeared before cleanup.");
         Invoke(service, "Move", ReadString(notes, "Id"), "desktop");
+        if (_textFiles)
+        {
+            object file = FindChild(service, folderId, TextFileName, null)!;
+            Invoke(service, "Delete", ReadString(file, "Id"));
+        }
         Invoke(service, "Delete", folderId);
     }
 

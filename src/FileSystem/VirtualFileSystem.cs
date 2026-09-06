@@ -1,12 +1,15 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text;
 
 namespace UsableComputer.FileSystem;
 
 internal sealed class VirtualFileSystem
 {
-    internal const int CurrentSchemaVersion = 1;
+    internal const int CurrentSchemaVersion = 2;
+    internal const int MaximumFileBytes = 64 * 1024;
+    internal const int MaximumStorageBytes = 1024 * 1024;
     internal const int MaximumNodeCount = 2048;
     internal const int MaximumNameLength = 64;
     internal const string RootId = "root";
@@ -65,6 +68,79 @@ internal sealed class VirtualFileSystem
         };
         _nodes.Add(node.Id, node);
         return node.Clone();
+    }
+
+    internal VirtualFileSystemNode CreateTextFile(string parentId, string name, string text)
+    {
+        RequireDirectory(parentId);
+        string normalizedName = NormalizeName(name);
+        EnsureUniqueName(parentId, normalizedName, exceptId: null);
+        EnsureCapacity();
+        ValidateText(text);
+        EnsureStorageCapacity(text, exceptId: null);
+        var node = new VirtualFileSystemNode
+        {
+            Id = Guid.NewGuid().ToString("N"),
+            ParentId = parentId,
+            Name = normalizedName,
+            Kind = VirtualFileSystemNodeKind.File,
+            TextContent = text,
+        };
+        _nodes.Add(node.Id, node);
+        return node.Clone();
+    }
+
+    internal string ReadText(string nodeId) => RequireFile(nodeId).TextContent!;
+
+    internal void WriteText(string nodeId, string text)
+    {
+        VirtualFileSystemNode node = RequireFile(nodeId);
+        ValidateText(text);
+        EnsureStorageCapacity(text, nodeId);
+        node.TextContent = text;
+    }
+
+    internal VirtualFileSystemNode ResolvePath(string path)
+    {
+        if (string.IsNullOrEmpty(path) || !path.StartsWith("/", StringComparison.Ordinal))
+            throw new ArgumentException("Use a virtual path such as /Desktop/Note.txt.", nameof(path));
+        VirtualFileSystemNode node = RequireNode(RootId);
+        if (path == "/") return node.Clone();
+        foreach (string segment in path.Substring(1).Split('/'))
+        {
+            string name = NormalizeName(segment);
+            RequireDirectory(node.Id);
+            string parentId = node.Id;
+            node = _nodes.Values.FirstOrDefault(candidate =>
+                candidate.ParentId == parentId && string.Equals(candidate.Name, name, StringComparison.OrdinalIgnoreCase))
+                ?? throw new InvalidOperationException($"'{path}' does not exist.");
+        }
+        return node.Clone();
+    }
+
+    private VirtualFileSystemNode RequireFile(string nodeId)
+    {
+        VirtualFileSystemNode node = RequireNode(nodeId);
+        if (node.Kind != VirtualFileSystemNodeKind.File)
+            throw new InvalidOperationException("This item is not a text file.");
+        return node;
+    }
+
+    private static void ValidateText(string text)
+    {
+        if (text == null) throw new ArgumentNullException(nameof(text));
+        if (Encoding.UTF8.GetByteCount(text) > MaximumFileBytes)
+            throw new InvalidOperationException("A text file may contain at most 64 KiB of UTF-8 text.");
+    }
+
+    private void EnsureStorageCapacity(string text, string? exceptId)
+    {
+        long bytes = Encoding.UTF8.GetByteCount(text);
+        foreach (VirtualFileSystemNode node in _nodes.Values)
+            if (node.Kind == VirtualFileSystemNodeKind.File && node.Id != exceptId)
+                bytes += Encoding.UTF8.GetByteCount(node.TextContent!);
+        if (bytes > MaximumStorageBytes)
+            throw new InvalidOperationException("The virtual disk has reached its 1 MiB text storage limit.");
     }
 
     internal bool EnsureAppShortcut(string targetId, string title)
@@ -184,7 +260,7 @@ internal sealed class VirtualFileSystem
     {
         if (snapshot == null)
             throw new ArgumentNullException(nameof(snapshot));
-        if (snapshot.SchemaVersion != CurrentSchemaVersion)
+        if (snapshot.SchemaVersion != 1 && snapshot.SchemaVersion != CurrentSchemaVersion)
             throw new InvalidOperationException($"Unsupported virtual filesystem schema version {snapshot.SchemaVersion}.");
         if (snapshot.Nodes == null)
             throw new InvalidOperationException("The virtual filesystem node collection is missing.");
@@ -192,6 +268,7 @@ internal sealed class VirtualFileSystem
             throw new InvalidOperationException($"The virtual filesystem exceeds the {MaximumNodeCount}-node limit.");
 
         var nodes = new Dictionary<string, VirtualFileSystemNode>(StringComparer.Ordinal);
+        long storageBytes = 0;
         foreach (VirtualFileSystemNode? node in snapshot.Nodes)
         {
             if (node == null)
@@ -202,6 +279,17 @@ internal sealed class VirtualFileSystem
                 throw new InvalidOperationException($"The virtual filesystem contains duplicate node id '{node.Id}'.");
             if (!Enum.IsDefined(typeof(VirtualFileSystemNodeKind), node.Kind))
                 throw new InvalidOperationException($"Virtual filesystem node '{node.Id}' has an unsupported kind.");
+            if (node.Kind == VirtualFileSystemNodeKind.File)
+            {
+                if (snapshot.SchemaVersion == 1 || node.TargetId != null)
+                    throw new InvalidOperationException("Invalid text file metadata.");
+                ValidateText(node.TextContent!);
+                storageBytes += Encoding.UTF8.GetByteCount(node.TextContent!);
+                if (storageBytes > MaximumStorageBytes)
+                    throw new InvalidOperationException("The virtual disk exceeds its text storage limit.");
+            }
+            else if (node.TextContent != null)
+                throw new InvalidOperationException("Only files may contain text.");
             string normalizedName = NormalizeName(node.Name);
             if (!string.Equals(node.Name, normalizedName, StringComparison.Ordinal))
                 throw new InvalidOperationException($"Virtual filesystem node '{node.Id}' has a non-canonical name.");

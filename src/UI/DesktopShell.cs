@@ -368,6 +368,11 @@ internal sealed class DesktopShell : IDisposable
             OpenFolder(node.Id);
             return;
         }
+        if (node.Kind == VirtualFileSystemNodeKind.File)
+        {
+            _windows.OpenFile(node.Id);
+            return;
+        }
         if (string.IsNullOrEmpty(node.TargetId) || !DesktopAppRegistry.TryGet(node.TargetId, out _))
         {
             MelonLoader.MelonLogger.Warning(
@@ -618,6 +623,8 @@ internal sealed class DesktopShell : IDisposable
 
         Sprite icon = node.Kind == VirtualFileSystemNodeKind.Directory
             ? RuntimeAppIcons.Get(BuiltInIcon.Folder)
+            : node.Kind == VirtualFileSystemNodeKind.File
+                ? RuntimeAppIcons.Get(BuiltInIcon.Notes)
             : descriptor != null
                 ? RuntimeAppIcons.Resolve(descriptor)
                 : RuntimeAppIcons.Get(BuiltInIcon.Generic);

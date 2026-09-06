@@ -22,7 +22,11 @@ Move windows around, minimize them to the taskbar, or maximize an app when you n
 | ![Settings with theme, wallpaper, icon size, and ordering controls](docs/images/settings.png) | ![Start menu with its program list and fixed Settings and Power off actions](docs/images/start-menu.png) |
 | Appearance settings survive restarts. Changing the theme keeps your wallpaper. | The program list scrolls; Settings and Power off stay within reach. |
 
-Arrange icons by name or put folders first. Files lets you create and rename folders, move app shortcuts, and delete empty folders. Folders belong to your save; appearance preferences and Notes are shared across saves. When the desktop fills up, scroll horizontally to reach the rest.
+Arrange icons by name or put folders first. Files lets you create folders, rename and move files or folders, move app shortcuts, and delete files or empty folders. Folders and text documents belong to your game save; appearance preferences are shared across saves. When the desktop fills up, scroll horizontally to reach the rest.
+
+Notes supports New, Open, Save, and Save as. Enter a virtual path such as `/Desktop/Shopping list.txt`, or double-click a document in Files or on the desktop. Save updates the open document even after it is moved or renamed; Save as creates a separate file and never overwrites an existing name. Documents are written to disk with the next game save. Unsaved drafts survive closing the Notes window, but not leaving the game save. Choose Discard to abandon a draft. Import old note copies the previous global note into a new document without deleting the original preference.
+
+The virtual disk supports UTF-8 text up to 64 KiB per file and 1 MiB across all files, with a 2,048-item limit. It is shared by computers within the current save and does not expose your Windows files.
 
 The close-up view stays centered on the screen as you resize the game.
 

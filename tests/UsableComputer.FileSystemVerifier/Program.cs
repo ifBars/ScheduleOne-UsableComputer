@@ -24,6 +24,8 @@ foreach ((string name, Action test) in tests)
     Console.WriteLine($"PASS {name}");
 }
 
+TextFileTests.Run();
+
 static void TestFreshRoots()
 {
     var fileSystem = new VirtualFileSystem();

@@ -12,6 +12,8 @@ internal sealed class VirtualFileSystemNode
 
     public string? TargetId { get; set; }
 
+    public string? TextContent { get; set; }
+
     internal VirtualFileSystemNode Clone()
     {
         return new VirtualFileSystemNode
@@ -21,6 +23,7 @@ internal sealed class VirtualFileSystemNode
             Name = Name,
             Kind = Kind,
             TargetId = TargetId,
+            TextContent = TextContent,
         };
     }
 }

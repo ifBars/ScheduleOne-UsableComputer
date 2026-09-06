@@ -86,17 +86,17 @@ internal sealed class FileExplorerApp : IDesktopAppSession, IDesktopDirectorySes
 
         GameObject tasks = TaskGroup(taskPane.transform, "FileTasks", "File and Folder Tasks", -8f, 200f);
         Button create = TaskLink(tasks.transform, "NewFolder", "Make a new folder", 34f);
-        Button rename = TaskLink(tasks.transform, "Rename", "Rename this folder", 58f);
+        Button rename = TaskLink(tasks.transform, "Rename", "Rename this item", 58f);
         Button cut = TaskLink(tasks.transform, "Cut", "Move this item", 82f);
         Button paste = TaskLink(tasks.transform, "Paste", "Paste here", 106f);
-        Button delete = TaskLink(tasks.transform, "Delete", "Delete this folder", 130f, UiFactory.Danger);
+        Button delete = TaskLink(tasks.transform, "Delete", "Delete this item", 130f, UiFactory.Danger);
         context.Bind(create, CreateFolder);
         context.Bind(rename, RenameSelected);
         context.Bind(cut, CutSelected);
         context.Bind(paste, Paste);
         context.Bind(delete, DeleteSelected);
 
-        S1Text nameLabel = UiFactory.CreateText(tasks.transform, "NameLabel", "Folder name:", 11f, UiFactory.TextMuted, Left());
+        S1Text nameLabel = UiFactory.CreateText(tasks.transform, "NameLabel", "Item name:", 11f, UiFactory.TextMuted, Left());
         Fixed(nameLabel.rectTransform, 10f, 154f, 130f, 17f);
         _nameInput = UiFactory.CreateInputField(tasks.transform, "NameInput", string.Empty, "New folder", false, out _);
         Fixed(_nameInput.GetComponent<RectTransform>(), 10f, 173f, 130f, 23f);
@@ -210,6 +210,8 @@ internal sealed class FileExplorerApp : IDesktopAppSession, IDesktopDirectorySes
         Fixed(rect, (index % 4) * 112f, (index / 4) * 92f, 102f, 84f);
         Sprite sprite = node.Kind == VirtualFileSystemNodeKind.Directory
             ? RuntimeAppIcons.Get(BuiltInIcon.Folder)
+            : node.Kind == VirtualFileSystemNodeKind.File
+                ? RuntimeAppIcons.Get(BuiltInIcon.Notes)
             : ResolveShortcutIcon(node);
         Icon(buttonObject.transform, "Icon", sprite, 30f, 4f, 43f);
         bool unavailable = node.Kind == VirtualFileSystemNodeKind.AppShortcut &&
@@ -236,7 +238,8 @@ internal sealed class FileExplorerApp : IDesktopAppSession, IDesktopDirectorySes
         _selectedNodeId = node.Id;
         _nameInput.text = node.Name;
         Refresh();
-        _details.text = node.Name + "\n" + (node.Kind == VirtualFileSystemNodeKind.Directory ? "File Folder" : "Application shortcut");
+        _details.text = node.Name + "\n" + (node.Kind == VirtualFileSystemNodeKind.Directory ? "File Folder" :
+            node.Kind == VirtualFileSystemNodeKind.File ? "Text document" : "Application shortcut");
         _status.text = $"Selected {node.Name}";
     }
 
@@ -244,6 +247,7 @@ internal sealed class FileExplorerApp : IDesktopAppSession, IDesktopDirectorySes
     {
         if (!VirtualFileSystemService.TryGetNode(nodeId, out VirtualFileSystemNode node)) return;
         if (node.Kind == VirtualFileSystemNodeKind.Directory) { OpenDirectory(node.Id); return; }
+        if (node.Kind == VirtualFileSystemNodeKind.File) { _context.OpenFile(node.Id); return; }
         if (!string.IsNullOrEmpty(node.TargetId) && DesktopAppRegistry.TryGet(node.TargetId, out _)) { _context.OpenApp(node.TargetId); return; }
         _status.text = $"{node.Name} is unavailable. Reinstall or re-enable its mod to restore it.";
     }
@@ -270,9 +274,9 @@ internal sealed class FileExplorerApp : IDesktopAppSession, IDesktopDirectorySes
     private void RenameSelected() => Mutate(() =>
     {
         VirtualFileSystemNode node = RequireSelected();
-        if (node.Kind != VirtualFileSystemNodeKind.Directory) throw new InvalidOperationException("Only folders can be renamed.");
+        if (node.Kind == VirtualFileSystemNodeKind.AppShortcut) throw new InvalidOperationException("Only files and folders can be renamed.");
         VirtualFileSystemService.Rename(node.Id, _nameInput.text);
-        return $"Renamed folder to {_nameInput.text.Trim()}.";
+        return $"Renamed item to {_nameInput.text.Trim()}.";
     });
 
     private void CutSelected()
@@ -283,7 +287,7 @@ internal sealed class FileExplorerApp : IDesktopAppSession, IDesktopDirectorySes
 
     private void Paste() => Mutate(() =>
     {
-        if (string.IsNullOrEmpty(_cutNodeId) || !VirtualFileSystemService.TryGetNode(_cutNodeId, out VirtualFileSystemNode node)) throw new InvalidOperationException("Cut a folder or app shortcut before pasting.");
+        if (string.IsNullOrEmpty(_cutNodeId) || !VirtualFileSystemService.TryGetNode(_cutNodeId, out VirtualFileSystemNode node)) throw new InvalidOperationException("Cut a file, folder or app shortcut before pasting.");
         VirtualFileSystemService.Move(node.Id, _currentDirectoryId);
         _cutNodeId = null;
         _selectedNodeId = node.Id;
@@ -293,7 +297,7 @@ internal sealed class FileExplorerApp : IDesktopAppSession, IDesktopDirectorySes
     private void DeleteSelected() => Mutate(() =>
     {
         VirtualFileSystemNode node = RequireSelected();
-        if (node.Kind != VirtualFileSystemNodeKind.Directory) throw new InvalidOperationException("Only folders can be deleted. App shortcuts can be moved into folders.");
+        if (node.Kind == VirtualFileSystemNodeKind.AppShortcut) throw new InvalidOperationException("Only files and folders can be deleted. App shortcuts can be moved into folders.");
         VirtualFileSystemService.Delete(node.Id);
         _selectedNodeId = null;
         _nameInput.text = string.Empty;

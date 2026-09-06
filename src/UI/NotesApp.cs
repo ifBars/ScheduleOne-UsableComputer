@@ -1,131 +1,137 @@
 using System;
 using UsableComputer.API;
+using UsableComputer.FileSystem;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 #if IL2CPPMELON
-using S1GameInput = Il2CppScheduleOne.GameInput;
 using S1Input = Il2CppTMPro.TMP_InputField;
 using S1Text = Il2CppTMPro.TextMeshProUGUI;
-#elif MONOMELON
-using S1GameInput = ScheduleOne.GameInput;
+using S1Alignment = Il2CppTMPro.TextAlignmentOptions;
+#else
 using S1Input = TMPro.TMP_InputField;
 using S1Text = TMPro.TextMeshProUGUI;
+using S1Alignment = TMPro.TextAlignmentOptions;
 #endif
 
 namespace UsableComputer.UI;
 
 internal sealed class NotesApp : IDesktopAppSession
 {
+    private readonly DesktopAppContext _context;
+    private readonly NotesDocument _document;
+    private readonly S1Input _input;
+    private readonly S1Input _path;
+    private readonly S1Text _status;
+
     internal NotesApp(DesktopAppContext context)
     {
-        Build(context.Container, context.Listeners);
-    }
+        _context = context;
+        _document = VirtualFileSystemService.Notes;
+        Transform parent = context.Container;
+        AddButton("New", "New", 12f, 54f, () => Change(() => _document.New()));
+        AddButton("Open", "Open", 72f, 54f, () => Change(_document.OpenPath));
+        AddButton("Save", "Save", 132f, 54f, () => Save(false));
+        AddButton("SaveAs", "Save as", 192f, 70f, () => Save(true));
+        AddButton("Discard", "Discard", 268f, 66f, () => Change(() => _document.New(discard: true)));
+        Button import = AddButton("ImportNote", "Import old note", 340f, 142f,
+            () => Change(() => _document.Import(PreferencesStore.Note)));
+        import.interactable = !string.IsNullOrEmpty(PreferencesStore.Note);
 
-    public void OnOpened()
-    {
-    }
+        _path = UiFactory.CreateInputField(parent, "NotePath", _document.Path,
+            "/Desktop/Note.txt", false, out _);
+        TopRect(_path.GetComponent<RectTransform>(), 12f, 46f, -24f, 34f, stretch: true);
+        BindTyping(_path);
+        context.Listeners.Add<string>(value => _document.Path = value, _path.onValueChanged);
 
-    public void OnClosed()
-    {
-    }
-
-    public void OnTick()
-    {
-    }
-
-    public void Dispose()
-    {
-    }
-
-    internal void Build(Transform parent, UiListenerRegistry listeners)
-    {
-        S1Text heading = UiFactory.CreateText(
-            parent,
-            "Heading",
-            "Notes",
-            21f,
-            UiFactory.TextPrimary,
-            GetHeadingAlignment(),
-            bold: true);
-        SetHeadingRect(heading.rectTransform);
-
-        S1Input input = UiFactory.CreateInputField(
-            parent,
-            "NoteInput",
-            PreferencesStore.Note,
-            "Write something worth remembering...",
-            multiline: true,
-            out _);
-        RectTransform inputRect = input.GetComponent<RectTransform>();
+        _input = UiFactory.CreateInputField(parent, "NoteInput", _document.Text,
+            "Write something worth remembering...", true, out S1Text bodyText);
+        bodyText.richText = false;
+        RectTransform inputRect = _input.GetComponent<RectTransform>();
         inputRect.anchorMin = Vector2.zero;
         inputRect.anchorMax = Vector2.one;
-        inputRect.offsetMin = new Vector2(12f, 58f);
-        inputRect.offsetMax = new Vector2(-12f, -48f);
+        inputRect.offsetMin = new Vector2(12f, 54f);
+        inputRect.offsetMax = new Vector2(-12f, -88f);
+        BindTyping(_input);
 
-        S1Text status = UiFactory.CreateText(
-            parent,
-            "Status",
-            "Saved globally",
-            13f,
-            UiFactory.TextMuted,
-            GetStatusAlignment());
-        RectTransform statusRect = status.rectTransform;
-        statusRect.anchorMin = new Vector2(0f, 0f);
+        _status = UiFactory.CreateText(parent, "NoteStatus", string.Empty, 12f,
+            UiFactory.TextMuted, S1Alignment.MidlineLeft);
+        RectTransform statusRect = _status.rectTransform;
+        statusRect.anchorMin = Vector2.zero;
         statusRect.anchorMax = new Vector2(1f, 0f);
-        statusRect.pivot = new Vector2(0.5f, 0.5f);
-        statusRect.sizeDelta = new Vector2(-136f, 32f);
-        statusRect.anchoredPosition = new Vector2(-62f, 25f);
-
-        Button saveButton = UiFactory.CreateButton(
-            parent,
-            "Save",
-            "Save note",
-            UiFactory.Accent,
-            out _);
-        RectTransform saveRect = saveButton.GetComponent<RectTransform>();
-        saveRect.anchorMin = new Vector2(1f, 0f);
-        saveRect.anchorMax = new Vector2(1f, 0f);
-        saveRect.pivot = new Vector2(1f, 0.5f);
-        saveRect.sizeDelta = new Vector2(112f, 32f);
-        saveRect.anchoredPosition = new Vector2(-12f, 25f);
-
-        listeners.Add(() =>
+        statusRect.pivot = new Vector2(0.5f, 0f);
+        statusRect.sizeDelta = new Vector2(-24f, 46f);
+        statusRect.anchoredPosition = new Vector2(0f, 4f);
+        _status.richText = false;
+        context.Listeners.Add<string>(value =>
         {
-            PreferencesStore.SetNote(input.text);
-            status.text = "Saved globally";
-        }, saveButton.onClick);
-
-        var trigger = input.gameObject.AddComponent<EventTrigger>();
-        listeners.AddTrigger(trigger, EventTriggerType.Select, _ => S1GameInput.IsTyping = true);
-        listeners.AddTrigger(trigger, EventTriggerType.Deselect, _ => S1GameInput.IsTyping = false);
-        listeners.Add<string>(
-            _ => S1GameInput.IsTyping = false,
-            input.onEndEdit);
-        listeners.Add<string>(
-            _ =>
-            {
-                if (input.isFocused)
-                    S1GameInput.IsTyping = true;
-            },
-            input.onValueChanged);
+            _document.Text = value;
+            ShowStatus();
+        }, _input.onValueChanged);
+        ShowStatus();
     }
 
-    private static void SetHeadingRect(RectTransform rectTransform)
+    internal void OpenFile(string fileId) => Change(() => _document.Open(fileId));
+
+    public void OnOpened() { }
+    public void OnClosed() => _context.SetTyping(false);
+    public void OnTick() { }
+    public void Dispose() { }
+
+    private void Save(bool saveAs) => Change(() => _document.Save(saveAs));
+
+    private void Change(Action action)
     {
-        rectTransform.anchorMin = new Vector2(0f, 1f);
-        rectTransform.anchorMax = new Vector2(1f, 1f);
-        rectTransform.pivot = new Vector2(0.5f, 1f);
-        rectTransform.sizeDelta = new Vector2(-24f, 32f);
-        rectTransform.anchoredPosition = new Vector2(0f, -10f);
+        try
+        {
+            action();
+            _path.text = _document.Path;
+            _input.text = _document.Text;
+            ShowStatus();
+        }
+        catch (Exception exception)
+        {
+            _status.text = exception.Message;
+        }
     }
 
-#if IL2CPPMELON
-    private static Il2CppTMPro.TextAlignmentOptions GetHeadingAlignment() => Il2CppTMPro.TextAlignmentOptions.MidlineLeft;
-    private static Il2CppTMPro.TextAlignmentOptions GetStatusAlignment() => Il2CppTMPro.TextAlignmentOptions.MidlineLeft;
-#else
-    private static TMPro.TextAlignmentOptions GetHeadingAlignment() => TMPro.TextAlignmentOptions.MidlineLeft;
-    private static TMPro.TextAlignmentOptions GetStatusAlignment() => TMPro.TextAlignmentOptions.MidlineLeft;
-#endif
+    private void ShowStatus()
+    {
+        _status.text = _document.IsDirty
+            ? "Unsaved draft. Save before leaving this game save."
+            : _document.FileId == null
+                ? "Enter a file path above. Save as creates a new file."
+                : "Saved to virtual disk. Stored on disk with your next game save.";
+    }
+
+    private Button AddButton(string name, string label, float x, float width, Action action)
+    {
+        Button button = UiFactory.CreateButton(_context.Container, name, label, UiFactory.SurfaceRaised, out S1Text text);
+        text.fontSize = 12f;
+        TopRect(button.GetComponent<RectTransform>(), x, 8f, width, 30f);
+        _context.Bind(button, action);
+        return button;
+    }
+
+    private void BindTyping(S1Input input)
+    {
+        var trigger = input.gameObject.AddComponent<EventTrigger>();
+        _context.Listeners.AddTrigger(trigger, EventTriggerType.Select, _ => _context.SetTyping(true));
+        _context.Listeners.AddTrigger(trigger, EventTriggerType.Deselect, _ => _context.SetTyping(false));
+        _context.Listeners.Add<string>(_ => _context.SetTyping(false), input.onEndEdit);
+        _context.Listeners.Add<string>(_ =>
+        {
+            if (input.isFocused) _context.SetTyping(true);
+        }, input.onValueChanged);
+    }
+
+    private static void TopRect(RectTransform rect, float x, float y, float width, float height, bool stretch = false)
+    {
+        rect.anchorMin = new Vector2(0f, 1f);
+        rect.anchorMax = new Vector2(stretch ? 1f : 0f, 1f);
+        rect.pivot = new Vector2(0f, 1f);
+        rect.sizeDelta = new Vector2(width, height);
+        rect.anchoredPosition = new Vector2(x, -y);
+    }
 }
