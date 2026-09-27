@@ -34,7 +34,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Include="..\..\src\DisplayProfile.cs" Link="DisplayProfile.cs" />
+    <Compile Include="..\..\src\Hardware\DisplayProfile.cs" Link="DisplayProfile.cs" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Il2cpp'">

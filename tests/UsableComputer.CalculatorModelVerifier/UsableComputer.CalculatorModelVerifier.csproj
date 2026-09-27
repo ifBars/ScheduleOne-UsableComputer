@@ -9,6 +9,6 @@
 
   <ItemGroup>
     <Compile Include="Program.cs" />
-    <Compile Include="..\..\src\Logic\CalculatorModel.cs" Link="CalculatorModel.cs" />
+    <Compile Include="..\..\src\Apps\Calculator\CalculatorModel.cs" Link="CalculatorModel.cs" />
   </ItemGroup>
 </Project>
