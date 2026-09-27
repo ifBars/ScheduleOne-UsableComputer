@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><OutputType>Exe</OutputType><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+  <ItemGroup><PackageReference Include="MoonSharp" Version="2.0.0" />
+    <Compile Include="../../src/Scripting/LuaStorageBook.cs" Link="LuaStorageBook.cs" />
+    <Compile Include="../../src/Scripting/LuaApiContract.cs" Link="LuaApiContract.cs" />
+    <None Include="../../examples/Lua/shift-tally.lua" Link="shift-tally.lua" CopyToOutputDirectory="PreserveNewest" />
+    <None Include="../../examples/Lua/shift-checklist.lua" Link="shift-checklist.lua" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+</Project>

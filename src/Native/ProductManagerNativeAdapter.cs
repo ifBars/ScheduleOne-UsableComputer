@@ -19,10 +19,16 @@ namespace UsableComputer.Native;
 internal static class ProductManagerNativeAdapter
 {
     internal static List<ProductViewModel> ReadDiscoveredProducts()
+        => ReadDiscoveredProducts(out _);
+
+    internal static List<ProductViewModel> ReadDiscoveredProducts(out bool available)
     {
+        available = false;
         var result = new List<ProductViewModel>();
         try
         {
+            if (!S1ProductManager.InstanceExists || S1ProductManager.Instance == null)
+                return result;
             var discoveredProducts = S1ProductManager.DiscoveredProducts;
             if (discoveredProducts == null)
                 return result;
@@ -74,6 +80,7 @@ internal static class ProductManagerNativeAdapter
                     listed,
                     favourited));
             }
+            available = true;
         }
         catch (Exception exception)
         {

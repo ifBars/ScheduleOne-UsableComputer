@@ -16,6 +16,14 @@ using S1MetaData = Il2CppScheduleOne.Persistence.Datas.MetaData;
 using S1SaveInfo = Il2CppScheduleOne.Persistence.SaveInfo;
 using S1SaveManager = Il2CppScheduleOne.Persistence.SaveManager;
 using S1Registry = Il2CppScheduleOne.Registry;
+using S1MoneyManager = Il2CppScheduleOne.Money.MoneyManager;
+using S1DeliveryManager = Il2CppScheduleOne.Delivery.DeliveryManager;
+using S1DeliveryApp = Il2CppScheduleOne.UI.Phone.Delivery.DeliveryApp;
+using S1DeliveryShop = Il2CppScheduleOne.UI.Phone.Delivery.DeliveryShop;
+using S1ListingEntry = Il2CppScheduleOne.UI.Phone.Delivery.ListingEntry;
+using S1Receipt = Il2CppScheduleOne.Delivery.DeliveryReceipt;
+using S1Property = Il2CppScheduleOne.Property.Property;
+using S1ItemPair = Il2CppScheduleOne.DevUtilities.StringIntPair;
 #else
 using S1Input = TMPro.TMP_InputField;
 using S1Text = TMPro.TextMeshProUGUI;
@@ -27,6 +35,14 @@ using S1MetaData = ScheduleOne.Persistence.Datas.MetaData;
 using S1SaveInfo = ScheduleOne.Persistence.SaveInfo;
 using S1SaveManager = ScheduleOne.Persistence.SaveManager;
 using S1Registry = ScheduleOne.Registry;
+using S1MoneyManager = ScheduleOne.Money.MoneyManager;
+using S1DeliveryManager = ScheduleOne.Delivery.DeliveryManager;
+using S1DeliveryApp = ScheduleOne.UI.Phone.Delivery.DeliveryApp;
+using S1DeliveryShop = ScheduleOne.UI.Phone.Delivery.DeliveryShop;
+using S1ListingEntry = ScheduleOne.UI.Phone.Delivery.ListingEntry;
+using S1Receipt = ScheduleOne.Delivery.DeliveryReceipt;
+using S1Property = ScheduleOne.Property.Property;
+using S1ItemPair = ScheduleOne.DevUtilities.StringIntPair;
 #endif
 
 [assembly: MelonInfo(
@@ -38,7 +54,7 @@ using S1Registry = ScheduleOne.Registry;
 
 namespace UsableComputer.VfsSmoke;
 
-public sealed class Core : MelonMod
+public sealed partial class Core : MelonMod
 {
     private const string FolderName = "Smoke Workspace";
     private const string NotesAppId = "notes";
@@ -54,6 +70,23 @@ public sealed class Core : MelonMod
     private GameObject? _computerModel;
     private bool _iconLayout;
     private bool _textFiles;
+    private bool _reports;
+    private bool _deliveries;
+    private bool _desktopUx;
+    private bool _appIcons;
+    private bool _dealers;
+    private bool _drivers;
+    private bool _power;
+    private bool _products;
+    private bool _studio;
+    private bool _luaStorage;
+    private bool _tvInventory;
+    private bool _noodle;
+    private bool _bridge;
+    private bool _eggRun;
+    private bool _doomRuntime;
+    private bool _nestedRuntime;
+    private bool _laptop;
     private const string TextFileName = "Shopping list.txt";
     private const string NoteText = "Shopping list\nMilk\nCoffee\nSave a copy for tomorrow.";
     private IDisposable? _controller;
@@ -70,6 +103,23 @@ public sealed class Core : MelonMod
         _enabled = Array.IndexOf(args, "--usable-computer-vfs-smoke") >= 0;
         _iconLayout = Array.IndexOf(args, "--usable-computer-icon-layout-smoke") >= 0;
         _textFiles = Array.IndexOf(args, "--usable-computer-text-files-smoke") >= 0;
+        _reports = Array.IndexOf(args, "--usable-computer-reports-smoke") >= 0;
+        _deliveries = Array.IndexOf(args, "--usable-computer-deliveries-smoke") >= 0;
+        _desktopUx = Array.IndexOf(args, "--usable-computer-desktop-ux-smoke") >= 0;
+        _appIcons = Array.IndexOf(args, "--usable-computer-app-icons-smoke") >= 0;
+        _dealers = Array.IndexOf(args, "--usable-computer-dealers-smoke") >= 0;
+        _drivers = Array.IndexOf(args, "--usable-computer-drivers-smoke") >= 0;
+        _power = Array.IndexOf(args, "--usable-computer-power-smoke") >= 0;
+        _products = Array.IndexOf(args, "--usable-computer-products-smoke") >= 0;
+        _studio = Array.IndexOf(args, "--usable-computer-studio-smoke") >= 0;
+        _luaStorage = Array.IndexOf(args, "--usable-computer-lua-storage-smoke") >= 0;
+        _tvInventory = Array.IndexOf(args, "--usable-computer-tv-inventory-smoke") >= 0;
+        _noodle = Array.IndexOf(args, "--usable-computer-noodle-smoke") >= 0;
+        _bridge = Array.IndexOf(args, "--usable-computer-bridge-smoke") >= 0;
+        _eggRun = Array.IndexOf(args, "--usable-computer-egg-run-smoke") >= 0;
+        _doomRuntime = Array.IndexOf(args, "--usable-computer-doom-runtime-smoke") >= 0;
+        _nestedRuntime = Array.IndexOf(args, "--usable-computer-nested-runtime-smoke") >= 0;
+        _laptop = Array.IndexOf(args, "--usable-computer-laptop-smoke") >= 0;
         if (!_enabled)
             return;
 
@@ -187,6 +237,37 @@ public sealed class Core : MelonMod
         Screen.SetResolution(1280, 720, false);
         yield return new WaitForSecondsRealtime(2f);
 
+        if (_laptop)
+        {
+            yield return RunLaptopDisplayScenario();
+            if (_completed) yield break;
+        }
+
+        if (_desktopUx)
+        {
+            OpenSettings();
+            IEnumerator scenario = UsableComputer.DisplaySmoke.DesktopInteractionScenario.Run(
+                GameObject.Find("UsableComputer_DesktopCanvas"), Camera.main!, _outputDirectory,
+                verifyIconPosition: true, expectSavedIconPosition: _phase == "reload");
+            while (true)
+            {
+                object? current;
+                try
+                {
+                    if (!scenario.MoveNext()) break;
+                    current = scenario.Current;
+                }
+                catch (Exception exception)
+                {
+                    Fail("Desktop UX scenario failed", Unwrap(exception));
+                    yield break;
+                }
+                yield return current;
+            }
+            _desktop!.GetType().GetMethod("OpenFolder", BindingFlags.Instance | BindingFlags.NonPublic)!
+                .Invoke(_desktop, new object[] { folderId });
+        }
+
         if (_iconLayout)
         {
             yield return RunIconLayoutScenario();
@@ -196,6 +277,96 @@ public sealed class Core : MelonMod
         if (_textFiles)
         {
             yield return RunTextFilesScenario(folderId);
+            if (_completed) yield break;
+        }
+
+        if (_reports)
+        {
+            yield return RunReportsScenario();
+            if (_completed) yield break;
+        }
+
+        if (_noodle)
+        {
+            yield return RunNoodleScenario();
+            if (_completed) yield break;
+        }
+
+        if (_eggRun)
+        {
+            yield return RunEggRunScenario();
+            if (_completed) yield break;
+        }
+
+        if (_tvInventory)
+        {
+            yield return RunTvInventoryScenario();
+            if (_completed) yield break;
+        }
+
+        if (_bridge)
+        {
+            yield return RunBridgeScenario();
+            if (_completed) yield break;
+        }
+
+        if (_doomRuntime)
+        {
+            yield return RunDoomRuntimeScenario();
+            if (_completed) yield break;
+        }
+
+        if (_nestedRuntime)
+        {
+            yield return RunNestedGameRuntimeScenario();
+            if (_completed) yield break;
+        }
+
+        if (_luaStorage)
+        {
+            yield return RunLuaStorageScenario();
+            if (_completed) yield break;
+        }
+
+        if (_studio)
+        {
+            yield return RunStudioScenario();
+            if (_completed) yield break;
+        }
+
+        if (_products)
+        {
+            yield return RunProductsScenario();
+            if (_completed) yield break;
+        }
+
+        if (_power)
+        {
+            yield return RunPowerScenario();
+            if (_completed) yield break;
+        }
+
+        if (_drivers)
+        {
+            yield return RunDriversScenario();
+            if (_completed) yield break;
+        }
+
+        if (_dealers)
+        {
+            yield return RunDealersScenario();
+            if (_completed) yield break;
+        }
+
+        if (_appIcons)
+        {
+            yield return RunAppIconsScenario();
+            if (_completed) yield break;
+        }
+
+        if (_deliveries)
+        {
+            yield return RunDeliveriesScenario();
             if (_completed) yield break;
         }
 
@@ -247,6 +418,13 @@ public sealed class Core : MelonMod
                 "virtual-filesystem.json");
             Require(File.Exists(persistedPath), "The S1API saveable file was not created.");
             string json = File.ReadAllText(persistedPath);
+            if (_reports)
+            {
+                string reportsPath = Path.Combine(_savePath, "Modded", "Saveables", "UsableComputerReportsSave", "bank-reports.json");
+                Require(File.Exists(reportsPath), "Bank reports were not persisted.");
+                string reportsJson = File.ReadAllText(reportsPath);
+                Require(reportsJson.Contains("Reports smoke receipt"), "Bank report receipt was not persisted.");
+            }
             bool containsFolder = json.Contains(FolderName, StringComparison.Ordinal);
             if (string.Equals(_phase, "seed", StringComparison.Ordinal))
                 Require(containsFolder, "The seeded folder was not persisted.");
@@ -358,7 +536,7 @@ public sealed class Core : MelonMod
                     Require(point.x >= viewport.xMin - 0.1f && point.x <= viewport.xMax + 0.1f && point.y >= viewport.yMin - 0.1f && point.y <= viewport.yMax + 0.1f,
                         $"Last program is clipped after scrolling: point={point} viewport={viewport} offset={scroll.content.anchoredPosition} normalized={scroll.verticalNormalizedPosition}.");
                 }
-                Require(GameObject.Find("Start_Settings").activeInHierarchy && GameObject.Find("Start_Power off").activeInHierarchy, "Footer actions disappeared while scrolling.");
+                Require(GameObject.Find("Start_Settings").activeInHierarchy && GameObject.Find("Start_Shut down").activeInHierarchy && GameObject.Find("Start_Restart").activeInHierarchy, "Footer actions disappeared while scrolling.");
                 GameObject.Find("Start_Notes").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
                 RequireWindow("notes");
                 CloseAllWindows();
@@ -411,7 +589,7 @@ public sealed class Core : MelonMod
         try
         {
             for (int index = 0; index < 30; index++)
-                ids.Add(ReadString(Invoke(service, "CreateDirectory", "desktop", $"Overflow folder with a long label {index:00}")!, "Id"));
+                ids.Add(ReadString(Invoke(service, "CreateDirectory", "desktop", $"ZZZ overflow folder with a long label {index:00}")!, "Id"));
             Canvas.ForceUpdateCanvases();
             var scroll = GameObject.Find("DesktopIconViewport").GetComponent<UnityEngine.UI.ScrollRect>();
             scroll.horizontalScrollbar.value = 0f;
@@ -422,6 +600,7 @@ public sealed class Core : MelonMod
                 Require(scroll.horizontalScrollbar.gameObject.activeInHierarchy, "Overflow scrollbar is hidden.");
                 Require(scroll.content.anchoredPosition.x < -1f, "Desktop did not scroll horizontally.");
                 Transform last = scroll.content.GetChild(scroll.content.childCount - 1);
+                Require(last.name == "DesktopIcon_" + ids[ids.Count - 1], "Overflow fixture is not the last sorted icon.");
                 Vector3[] corners = GetWorldCorners(last.GetComponent<RectTransform>());
                 foreach (Vector3 corner in corners)
                 {
@@ -429,7 +608,12 @@ public sealed class Core : MelonMod
                     Rect viewport = scroll.viewport.rect;
                     Require(point.x >= viewport.xMin - 0.1f && point.x <= viewport.xMax + 0.1f, "Last desktop icon is unreachable.");
                 }
-                last.GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                var pointer = new UnityEngine.EventSystems.PointerEventData(UnityEngine.EventSystems.EventSystem.current)
+                {
+                    button = UnityEngine.EventSystems.PointerEventData.InputButton.Left,
+                    clickCount = 2
+                };
+                last.GetComponent<UnityEngine.EventSystems.EventTrigger>().OnPointerClick(pointer);
                 RequireWindow("files");
                 CloseAllWindows();
             }
@@ -601,6 +785,113 @@ public sealed class Core : MelonMod
         LoggerInstance.Msg($"[UsableComputerTextFilesSmoke] PASS Runtime={ConstantsRuntime()} Phase={_phase} Save=True Move=True Open=True Draft=True Themes=2");
     }
 
+    private IEnumerator RunReportsScenario()
+    {
+        Type service = GetUsableComputerAssembly().GetType("UsableComputer.Reports.BankReportsService", true)!;
+        try
+        {
+            Invoke(service, "Flush");
+            Require((bool)service.GetProperty("Available", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!, "Report service unavailable.");
+            Require((bool)service.GetProperty("IsHost", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!, "Host report service did not recognize host.");
+            if (_phase == "seed")
+            {
+                S1MoneyManager.Instance.CreateOnlineTransaction("Reports smoke receipt", 123.45f, 1, "");
+                S1MoneyManager.Instance.CreateOnlineTransaction("Reports smoke expense", -23.45f, 1, "");
+                S1MoneyManager.Instance.CreateOnlineTransaction("A long delivery receipt description that should be shortened before reaching the amount column on the computer", -0.01f, 1, "");
+            }
+        }
+        catch (Exception exception)
+        {
+            Fail("Reports setup failed", Unwrap(exception));
+            yield break;
+        }
+        yield return new WaitForSecondsRealtime(1f);
+        try
+        {
+            Invoke(service, "Flush");
+            object book = service.GetProperty("Book", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
+            object[] days = ((IEnumerable)book.GetType().GetProperty("Days", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(book)!).Cast<object>().ToArray();
+            object[] entries = days.SelectMany(day => ((IEnumerable)day.GetType().GetProperty("Entries")!.GetValue(day)!).Cast<object>()).ToArray();
+            Require(entries.Count(entry => ReadString(entry, "Name") == "Reports smoke receipt") == 1,
+                "Receipt missing or duplicated after observation/reload.");
+            Require(entries.Count(entry => ReadString(entry, "Name") == "Reports smoke expense") == 1,
+                "Expense missing or duplicated after observation/reload.");
+            object receipt = entries.Single(entry => ReadString(entry, "Name") == "Reports smoke receipt");
+            Require((decimal)receipt.GetType().GetProperty("Amount")!.GetValue(receipt)! == 123.45m, "Receipt amount mismatch.");
+        }
+        catch (Exception exception)
+        {
+            Fail("Reports data failed", Unwrap(exception));
+            yield break;
+        }
+
+        foreach (string theme in new[] { "Light", "Dark" })
+        {
+            try
+            {
+                OpenSettings();
+                ClickChoice(theme);
+                CloseAllWindows();
+                _desktop!.GetType().GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!
+                    .Invoke(_desktop, new object[] { "bank-reports" });
+                RequireWindow("bank-reports");
+            }
+            catch (Exception exception)
+            {
+                Fail($"Reports {theme} window failed", Unwrap(exception));
+                yield break;
+            }
+            // Unity destroys the previous window at the end of the frame.
+            yield return null;
+            try
+            {
+                GameObject.Find("ReportExport").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                Require(GameObject.Find("ReportStatus").GetComponent<S1Text>().text.StartsWith("Saved Bank report"), "Report export failed.");
+                Require(GameObject.Find("ReportTotals").GetComponent<S1Text>().text.Contains("123.45"), "Report totals were not rendered.");
+                object files = GetServiceType();
+                object[] exported = ((IEnumerable)Invoke(files, "GetChildren", "desktop")!).Cast<object>()
+                    .Where(entry => ReadString(entry, "Name").StartsWith("Bank report - Day ")).ToArray();
+                Require(exported.Length >= (theme == "Dark" ? 2 : 1), "Report export overwrote an earlier file.");
+                string contents = (string)Invoke(files, "ReadText", ReadString(exported.Last(), "Id"))!;
+                Require(contents.Contains("Reports smoke receipt") && contents.Contains("not profit"), "Export did not contain the report.");
+            }
+            catch (Exception exception)
+            {
+                Fail($"Reports {theme} UI failed", Unwrap(exception));
+                yield break;
+            }
+            yield return new WaitForSecondsRealtime(0.5f);
+            string screenshot = Path.Combine(_outputDirectory, $"reports-{theme}.png");
+            ScreenCapture.CaptureScreenshot(screenshot);
+            yield return WaitForCapture(screenshot);
+            if (_completed) yield break;
+            try
+            {
+                GameObject.Find("ReportPeriod").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                Require(GameObject.Find("ReportCoverage").GetComponent<S1Text>().text.Contains("days observed"), "Summary coverage was not rendered.");
+                Require(GameObject.Find("ReportTotals").GetComponent<S1Text>().text.Contains("123.45"), "Summary totals were not rendered.");
+                GameObject.Find("ReportExport").GetComponent<UnityEngine.UI.Button>().onClick.Invoke();
+                Require(GameObject.Find("ReportStatus").GetComponent<S1Text>().text.StartsWith("Saved Bank summary"), "Summary export failed.");
+                object[] summaries = ((IEnumerable)Invoke(GetServiceType(), "GetChildren", "desktop")!).Cast<object>()
+                    .Where(entry => ReadString(entry, "Name").StartsWith("Bank summary - Days ")).ToArray();
+                Require(summaries.Length >= (theme == "Dark" ? 2 : 1), "Summary export overwrote an earlier file.");
+                string summary = (string)Invoke(GetServiceType(), "ReadText", ReadString(summaries.Last(), "Id"))!;
+                Require(summary.Contains("days observed") && summary.Contains("not profit"), "Summary export lost coverage.");
+            }
+            catch (Exception exception)
+            {
+                Fail($"Reports {theme} summary failed", Unwrap(exception));
+                yield break;
+            }
+            yield return new WaitForSecondsRealtime(0.5f);
+            screenshot = Path.Combine(_outputDirectory, $"report-summary-{theme}.png");
+            ScreenCapture.CaptureScreenshot(screenshot);
+            yield return WaitForCapture(screenshot);
+            if (_completed) yield break;
+        }
+        LoggerInstance.Msg($"[UsableComputerReportsSmoke] PASS Runtime={ConstantsRuntime()} Phase={_phase} NativeReceipts=True NoDuplicates=True Export=True Themes=2");
+    }
+
     private object GetAppSession(string appId)
     {
         object manager = _desktop!.GetType().GetField("_windows", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(_desktop)!;
@@ -691,7 +982,7 @@ public sealed class Core : MelonMod
         _desktop = (IDisposable)shell;
     }
 
-    private static GameObject CreateComputerModel(Assembly assembly)
+    private GameObject CreateComputerModel(Assembly assembly)
     {
         object donorItem = S1Registry.GetItem("launderingstation")
             ?? throw new InvalidOperationException("The laundering station donor is unavailable.");
@@ -705,6 +996,27 @@ public sealed class Core : MelonMod
         GameObject donorObject = donor.BuiltItem.gameObject;
 
         Type factoryType = assembly.GetType("UsableComputer.Content.NativeComputerModelFactory", throwOnError: true)!;
+        if (_laptop)
+        {
+            object laptopItem = S1Registry.GetItem("usable_laptop")
+                ?? throw new InvalidOperationException("The laptop item was not registered before loading.");
+#if IL2CPP
+            S1BuildableDefinition laptopDefinition = ((Il2CppSystem.Object)laptopItem).TryCast<S1BuildableDefinition>()
+                ?? throw new InvalidOperationException("The laptop item is not a buildable definition.");
+#else
+            S1BuildableDefinition laptopDefinition = laptopItem as S1BuildableDefinition
+                ?? throw new InvalidOperationException("The laptop item is not a buildable definition.");
+#endif
+            Require(laptopDefinition.BuiltItem != null && laptopDefinition.StoredItem != null,
+                "The laptop is missing its placed or inventory prefab.");
+            Type registrar = assembly.GetType("UsableComputer.Content.ComputerContentRegistrar", true)!;
+            GameObject source = (GameObject)(registrar.GetMethod("FindNativeLaptop", BindingFlags.Static | BindingFlags.NonPublic)!
+                .Invoke(null, null) ?? throw new InvalidOperationException("The native laptop was not found."));
+            MethodInfo createLaptop = factoryType.GetMethod("CreateLaptop", BindingFlags.Static | BindingFlags.NonPublic)!;
+            return (GameObject)(createLaptop.Invoke(null, new object[] { donorObject, source })
+                ?? throw new InvalidOperationException("The physical laptop model could not be created."));
+        }
+
         MethodInfo create = factoryType.GetMethod("Create", BindingFlags.Static | BindingFlags.NonPublic)!;
         return (GameObject)(create.Invoke(null, new object[] { donorObject })
             ?? throw new InvalidOperationException("The physical computer model could not be created."));
@@ -801,7 +1113,7 @@ public sealed class Core : MelonMod
         string result =
             $"PASS|Runtime={runtime}|Phase={_phase}|Scene={SceneManager.GetActiveScene().name}|" +
             $"Reloaded={string.Equals(_phase, "reload", StringComparison.Ordinal)}|SaveObserved={sawSave}|" +
-            $"Persisted=True|Screenshot={screenshotPath}|SaveFile={persistedPath}";
+            $"Persisted=True|Laptop={_laptop}|Screenshot={screenshotPath}|SaveFile={persistedPath}";
         File.WriteAllText(Path.Combine(_outputDirectory, "result.txt"), result);
         LoggerInstance.Msg($"[UsableComputerVfsSmoke] {result}");
         CleanupFixture();

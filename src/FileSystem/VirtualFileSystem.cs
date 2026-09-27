@@ -206,6 +206,34 @@ internal sealed class VirtualFileSystem
         _nodes.Remove(node.Id);
     }
 
+    internal VirtualFileSystemNode Copy(string nodeId, string destinationId)
+    {
+        VirtualFileSystemNode source = RequireMutableNode(nodeId);
+        RequireDirectory(destinationId);
+        if (source.Kind == VirtualFileSystemNodeKind.Directory && IsDescendant(destinationId, source.Id))
+            throw new InvalidOperationException("A folder cannot be copied into itself or its descendants.");
+
+        // Validate the whole copy before publishing any new nodes.
+        VirtualFileSystemNode[] originals = _nodes.Values.Where(node => IsDescendant(node.Id, nodeId)).ToArray();
+        if (_nodes.Count + originals.Length > MaximumNodeCount)
+            throw new InvalidOperationException("The virtual disk has reached its item limit.");
+        long existingBytes = _nodes.Values.Sum(node => (long)Encoding.UTF8.GetByteCount(node.TextContent ?? string.Empty));
+        long copiedBytes = originals.Sum(node => (long)Encoding.UTF8.GetByteCount(node.TextContent ?? string.Empty));
+        if (existingBytes + copiedBytes > MaximumStorageBytes)
+            throw new InvalidOperationException("The virtual disk has reached its 1 MiB text storage limit.");
+        var ids = originals.ToDictionary(node => node.Id, _ => Guid.NewGuid().ToString("N"), StringComparer.Ordinal);
+        string name = MakeUniqueName(destinationId, source.Name);
+        foreach (VirtualFileSystemNode original in originals)
+        {
+            VirtualFileSystemNode copy = original.Clone();
+            copy.Id = ids[original.Id];
+            copy.ParentId = original.Id == nodeId ? destinationId : ids[original.ParentId!];
+            if (original.Id == nodeId) copy.Name = name;
+            _nodes.Add(copy.Id, copy);
+        }
+        return _nodes[ids[nodeId]].Clone();
+    }
+
     internal string CreateUniqueFolderName(string parentId)
     {
         RequireDirectory(parentId);

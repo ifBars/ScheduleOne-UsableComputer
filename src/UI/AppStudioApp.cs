@@ -13,7 +13,7 @@ using S1Text = TMPro.TextMeshProUGUI;
 
 namespace UsableComputer.UI;
 
-internal sealed class AppStudioApp : IDesktopAppSession
+internal sealed partial class AppStudioApp : IDesktopAppSession
 {
     private readonly S1Input _editor;
     private readonly S1Text _lineNumbers;
@@ -23,6 +23,8 @@ internal sealed class AppStudioApp : IDesktopAppSession
 
     internal AppStudioApp(DesktopAppContext context)
     {
+        _context = context;
+        _document = Workspace.Open("desktop-app.lua", LuaAppManager.GetEditorSource());
         GameObject toolbar = UiFactory.CreatePanel(
             context.Container,
             "EditorToolbar",
@@ -56,7 +58,7 @@ internal sealed class AppStudioApp : IDesktopAppSession
         S1Text help = UiFactory.CreateText(
             context.Container,
             "Help",
-            "Return an app definition and render rows. Save validates and hot-loads it.",
+            "Ctrl+S / Ctrl+Enter: save and run. Use < > to switch drafts.",
             12f,
             UiFactory.TextMuted,
             GetLeftAlignment());
@@ -69,33 +71,43 @@ internal sealed class AppStudioApp : IDesktopAppSession
         RectTransform gutterRect = gutter.GetComponent<RectTransform>();
         gutterRect.anchorMin = new Vector2(0f, 0f);
         gutterRect.anchorMax = new Vector2(0f, 1f);
-        gutterRect.offsetMin = new Vector2(8f, 50f);
-        gutterRect.offsetMax = new Vector2(50f, -74f);
-        gutter.AddComponent<RectMask2D>();
+        gutterRect.offsetMin = new Vector2(8f, 94f);
+        gutterRect.offsetMax = new Vector2(64f, -74f);
+        GameObject gutterViewport = UiFactory.CreatePanel(gutter.transform, "GutterViewport", Color.clear);
+        UiFactory.Stretch(gutterViewport.GetComponent<RectTransform>(), new Vector2(0f, 8f));
+        gutterViewport.AddComponent<RectMask2D>();
 
         _lineNumbers = UiFactory.CreateText(
-            gutter.transform,
+            gutterViewport.transform,
             "LineNumbers",
             string.Empty,
             14f,
             UiFactory.TextMuted,
             GetRightTopAlignment());
-        UiFactory.Stretch(_lineNumbers.rectTransform, new Vector2(5f, 8f));
+        UiFactory.Stretch(_lineNumbers.rectTransform, new Vector2(5f, 0f));
 
         _editor = UiFactory.CreateInputField(
             context.Container,
             "Source",
-            LuaAppManager.GetEditorSource(),
+            _document.Source,
             "return { id = \"my-app\", title = \"My App\", render = function() return {} end }",
             multiline: true,
             out S1Text codeText);
         _editor.GetComponent<Image>().color = UiFactory.SurfaceInset;
         codeText.color = UiFactory.TextPrimary;
         codeText.fontSize = 14f;
+        codeText.richText = false;
+        _editor.characterLimit = 65536;
+#if IL2CPPMELON
+        _editor.onValidateInput = Il2CppInterop.Runtime.DelegateSupport.ConvertDelegate<S1Input.OnValidateInput>(
+            new System.Func<string, int, char, char>(ValidateCodeCharacter));
+#else
+        _editor.onValidateInput = ValidateCodeCharacter;
+#endif
         RectTransform editorRect = _editor.GetComponent<RectTransform>();
         editorRect.anchorMin = new Vector2(0f, 0f);
         editorRect.anchorMax = new Vector2(1f, 1f);
-        editorRect.offsetMin = new Vector2(50f, 50f);
+        editorRect.offsetMin = new Vector2(64f, 94f);
         editorRect.offsetMax = new Vector2(-8f, -74f);
         context.Listeners.Add<string>(_ => context.SetTyping(true), _editor.onSelect);
         context.Listeners.Add<string>(_ => context.SetTyping(false), _editor.onDeselect);
@@ -118,7 +130,7 @@ internal sealed class AppStudioApp : IDesktopAppSession
         Button template = UiFactory.CreateButton(
             context.Container,
             "Templates",
-            "Templates ▾",
+            "Templates",
             UiFactory.SurfaceRaised,
             out _);
         RectTransform templateRect = template.GetComponent<RectTransform>();
@@ -158,8 +170,11 @@ internal sealed class AppStudioApp : IDesktopAppSession
         _status.rectTransform.anchorMin = new Vector2(0f, 0f);
         _status.rectTransform.anchorMax = new Vector2(1f, 0f);
         _status.rectTransform.pivot = new Vector2(0.5f, 0f);
-        _status.rectTransform.sizeDelta = new Vector2(-304f, 32f);
-        _status.rectTransform.anchoredPosition = new Vector2(146f, 9f);
+        _status.rectTransform.sizeDelta = new Vector2(-24f, 44f);
+        _status.rectTransform.anchoredPosition = new Vector2(0f, 46f);
+        _status.richText = false;
+        _savedSource = _document.SavedSource;
+        BuildEditorTools(context);
         UpdateLineNumbers(_editor.text);
     }
 
@@ -167,13 +182,9 @@ internal sealed class AppStudioApp : IDesktopAppSession
     {
     }
 
-    public void OnClosed()
-    {
-    }
+    public void OnClosed() => _context.SetTyping(false);
 
-    public void OnTick()
-    {
-    }
+    public void OnTick() => TickEditor();
 
     public void Dispose()
     {
@@ -181,9 +192,24 @@ internal sealed class AppStudioApp : IDesktopAppSession
 
     private void Save()
     {
-        bool saved = LuaAppManager.TrySaveAndRegister(_editor.text, out string message);
-        _status.text = message;
-        _status.color = saved ? UiFactory.Success : UiFactory.Danger;
+        try
+        {
+            bool saved = LuaAppManager.TrySaveAndRegister(_editor.text, out string message, out string appId);
+            _status.text = saved ? message : "Error: " + UsableComputer.Logic.StudioSource.DescribeDiagnostic(message);
+            _status.color = saved ? UiFactory.Success : UiFactory.TextPrimary;
+            _diagnosticLine = saved ? 0 : UsableComputer.Logic.StudioSource.DiagnosticLine(message);
+            if (saved) _document.SavedSource = _savedSource = _editor.text;
+            UpdateDocumentLabel();
+            _errorButton.interactable = _diagnosticLine > 0;
+            if (saved) _context.OpenApp(appId);
+        }
+        catch (System.Exception exception)
+        {
+            _status.text = "Could not save: " + exception.Message;
+            _status.color = UiFactory.TextPrimary;
+            _diagnosticLine = 0;
+            _errorButton.interactable = false;
+        }
     }
 
     private void ToggleTemplates()
@@ -214,8 +240,7 @@ internal sealed class AppStudioApp : IDesktopAppSession
 
     private void LoadTemplate(string name, string source)
     {
-        _editor.text = source;
-        _fileName.text = $"●  {name.ToLowerInvariant().Replace(' ', '-')}.lua";
+        SelectDraft(Workspace.Open(name.ToLowerInvariant().Replace(' ', '-') + ".lua", source));
         _templateMenu.SetActive(false);
         _status.text = $"{name} template loaded. Save when ready.";
         _status.color = UiFactory.TextMuted;
@@ -223,18 +248,10 @@ internal sealed class AppStudioApp : IDesktopAppSession
 
     private void UpdateLineNumbers(string source)
     {
-        int lineCount = 1;
-        for (int index = 0; index < source.Length; index++)
-        {
-            if (source[index] == '\n')
-                lineCount++;
-        }
-
-        lineCount = Mathf.Min(lineCount, 99);
-        var lines = new System.Text.StringBuilder(lineCount * 3);
-        for (int line = 1; line <= lineCount; line++)
-            lines.Append(line).Append('\n');
-        _lineNumbers.text = lines.ToString();
+        _layoutDirty = true;
+        _diagnosticLine = 0;
+        if (_errorButton != null) _errorButton.interactable = false;
+        UpdateDocumentLabel();
     }
 
     private static void SetTopRect(RectTransform rect, float height, float y)

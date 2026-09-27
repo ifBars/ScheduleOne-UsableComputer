@@ -250,8 +250,17 @@ internal sealed class NestedGameProcess : IDisposable
         if (!Directory.Exists(sourceRoot))
             throw new DirectoryNotFoundException("The game's MelonLoader runtime is missing: " + sourceRoot);
 
+        string generatedAssemblies = Path.Combine(sourceRoot, "Il2CppAssemblies");
+        if (File.Exists(Path.Combine(gameRoot, "GameAssembly.dll")) &&
+            !File.Exists(Path.Combine(generatedAssemblies, "UnityEngine.CoreModule.dll")))
+        {
+            throw new FileNotFoundException(
+                "The game's generated IL2CPP Unity wrappers are missing. Start the main game once with MelonLoader before launching nested Schedule I.",
+                Path.Combine(generatedAssemblies, "UnityEngine.CoreModule.dll"));
+        }
+
         string destinationRoot = Path.Combine(loaderRoot, "MelonLoader");
-        foreach (string directoryName in new[] { "Dependencies", "net35", "net472", "net6" })
+        foreach (string directoryName in new[] { "Dependencies", "Il2CppAssemblies", "net35", "net472", "net6" })
         {
             string source = Path.Combine(sourceRoot, directoryName);
             if (Directory.Exists(source))
@@ -267,7 +276,8 @@ internal sealed class NestedGameProcess : IDisposable
             string destinationFile = Path.Combine(destination, Path.GetFileName(sourceFile));
             var sourceInfo = new FileInfo(sourceFile);
             var destinationInfo = new FileInfo(destinationFile);
-            if (!destinationInfo.Exists || destinationInfo.Length != sourceInfo.Length)
+            if (!destinationInfo.Exists || destinationInfo.Length != sourceInfo.Length ||
+                destinationInfo.LastWriteTimeUtc != sourceInfo.LastWriteTimeUtc)
                 File.Copy(sourceFile, destinationFile, overwrite: true);
         }
         foreach (string sourceDirectory in Directory.GetDirectories(source, "*", SearchOption.TopDirectoryOnly))

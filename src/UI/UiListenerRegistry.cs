@@ -19,8 +19,11 @@ internal sealed class UiListenerRegistry : IDisposable
         if (_disposed)
             return;
 
-        EventHelper.AddListener(listener, unityEvent);
-        _removers.Add(() => EventHelper.RemoveListener(listener, unityEvent));
+        // S1API keys subscriptions by delegate, not by event. Give each binding its
+        // own delegate so shared actions (Back/Up, PointerUp/EndDrag) all subscribe.
+        Action ownedListener = () => listener();
+        EventHelper.AddListener(ownedListener, unityEvent);
+        _removers.Add(() => EventHelper.RemoveListener(ownedListener, unityEvent));
     }
 
     internal void Add<T>(Action<T> listener, UnityEvent<T> unityEvent)
@@ -28,8 +31,9 @@ internal sealed class UiListenerRegistry : IDisposable
         if (_disposed)
             return;
 
-        EventHelper.AddListener(listener, unityEvent);
-        _removers.Add(() => EventHelper.RemoveListener(listener, unityEvent));
+        Action<T> ownedListener = value => listener(value);
+        EventHelper.AddListener(ownedListener, unityEvent);
+        _removers.Add(() => EventHelper.RemoveListener(ownedListener, unityEvent));
     }
 
     internal void AddTrigger(
@@ -40,8 +44,9 @@ internal sealed class UiListenerRegistry : IDisposable
         if (_disposed)
             return;
 
-        EventHelper.AddEventTrigger(trigger, eventType, listener);
-        _removers.Add(() => EventHelper.RemoveEventTrigger(trigger, eventType, listener));
+        Action<BaseEventData> ownedListener = value => listener(value);
+        EventHelper.AddEventTrigger(trigger, eventType, ownedListener);
+        _removers.Add(() => EventHelper.RemoveEventTrigger(trigger, eventType, ownedListener));
     }
 
     public void Dispose()

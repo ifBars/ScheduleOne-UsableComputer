@@ -101,9 +101,15 @@ internal sealed class LuaDesktopAppSession : IDesktopAppSession
         }
         catch (Exception exception)
         {
+            ClearRows();
             BuildError(exception is ScriptRuntimeException runtime
                 ? runtime.DecoratedMessage ?? runtime.Message
                 : exception.Message);
+        }
+        finally
+        {
+            // Rows rebuilt after window creation must remain visible to the computer camera.
+            UiFactory.SetLayerRecursively(_content.gameObject, Constants.UiLayer);
         }
     }
 
@@ -125,6 +131,9 @@ internal sealed class LuaDesktopAppSession : IDesktopAppSession
                 return 16f;
             case "button":
                 CreateButtonRow(index, text, row.Get("action"), y);
+                return 42f;
+            case "checkbox":
+                CreateCheckboxRow(index, text, row.Get("value"), row.Get("action"), y);
                 return 42f;
             case "text":
                 CreateTextRow($"Text_{index}", text, 15f, UiFactory.TextPrimary, y, 32f, bold: false);
@@ -197,17 +206,59 @@ internal sealed class LuaDesktopAppSession : IDesktopAppSession
         _rowListeners.Add(() => InvokeAction(action), button.onClick);
     }
 
-    private void InvokeAction(DynValue action)
+    private void CreateCheckboxRow(int index, string text, DynValue value, DynValue action, float y)
+    {
+        if (value.Type != DataType.Boolean)
+            throw new ScriptRuntimeException($"checkbox row {index} requires a boolean value.");
+        if (action.Type != DataType.Function && action.Type != DataType.ClrFunction)
+            throw new ScriptRuntimeException($"checkbox row {index} requires an action function.");
+
+        GameObject row = UiFactory.CreatePanel(_content, $"Checkbox_{index}", UiFactory.SurfaceRaised);
+        SetRowRect(row.GetComponent<RectTransform>(), y, 36f);
+        GameObject box = UiFactory.CreatePanel(row.transform, "Box", UiFactory.TextMuted);
+        RectTransform boxRect = box.GetComponent<RectTransform>();
+        boxRect.anchorMin = boxRect.anchorMax = new Vector2(0f, 0.5f);
+        boxRect.pivot = new Vector2(0f, 0.5f);
+        boxRect.anchoredPosition = new Vector2(8f, 0f);
+        boxRect.sizeDelta = new Vector2(22f, 22f);
+        GameObject interior = UiFactory.CreatePanel(box.transform, "Interior", UiFactory.SurfaceRaised);
+        UiFactory.Stretch(interior.GetComponent<RectTransform>(), new Vector2(2f, 2f));
+        S1Text check = UiFactory.CreateText(box.transform, "Checked", "x", 18f, UiFactory.TextPrimary, GetCenterAlignment(), bold: true);
+        UiFactory.Stretch(check.rectTransform, Vector2.zero);
+        S1Text label = UiFactory.CreateText(row.transform, "Label", text, 15f, UiFactory.TextPrimary, GetLeftAlignment());
+        UiFactory.Stretch(label.rectTransform, Vector2.zero);
+        label.rectTransform.offsetMin = new Vector2(40f, 2f);
+        label.rectTransform.offsetMax = new Vector2(-8f, -2f);
+        label.richText = false;
+#if IL2CPPMELON
+        label.overflowMode = Il2CppTMPro.TextOverflowModes.Ellipsis;
+#else
+        label.overflowMode = TMPro.TextOverflowModes.Ellipsis;
+#endif
+        var toggle = row.AddComponent<Toggle>();
+        toggle.transition = Selectable.Transition.None;
+        toggle.targetGraphic = row.GetComponent<Image>();
+        toggle.graphic = check;
+        toggle.isOn = value.Boolean;
+        // Bind after initialization: rendering must never invoke the app's mutation callback.
+        _rowListeners.Add<bool>(isOn => InvokeAction(action, DynValue.NewBoolean(isOn)), toggle.onValueChanged);
+    }
+
+    private void InvokeAction(DynValue action, params DynValue[] arguments)
     {
         try
         {
-            LuaExecutionBudget.RunFunction(_definition.Script, action, $"{_definition.Title} button action");
+            LuaExecutionBudget.RunFunction(_definition.Script, action, $"{_definition.Title} action", arguments);
             Refresh();
         }
         catch (Exception exception)
         {
             MelonLoader.MelonLogger.Warning(
                 $"[{Constants.ModName}] Lua app '{_definition.Id}' action failed: {exception.Message}");
+            ClearRows();
+            BuildError(exception.Message);
+            _nextRefresh = Time.unscaledTime + 5f;
+            UiFactory.SetLayerRecursively(_content.gameObject, Constants.UiLayer);
         }
     }
 
@@ -218,10 +269,11 @@ internal sealed class LuaDesktopAppSession : IDesktopAppSession
             "Error",
             $"App error\n{message}",
             15f,
-            UiFactory.Danger,
+            UiFactory.TextPrimary,
             GetLeftAlignment(),
             bold: true);
         SetRowRect(error.rectTransform, 0f, 120f);
+        error.richText = false;
         _content.sizeDelta = new Vector2(0f, 128f);
     }
 
@@ -232,6 +284,7 @@ internal sealed class LuaDesktopAppSession : IDesktopAppSession
         for (int index = _content.childCount - 1; index >= 0; index--)
         {
             Transform child = _content.GetChild(index);
+            child.gameObject.SetActive(false);
             child.SetParent(null, false);
             UnityEngine.Object.Destroy(child.gameObject);
         }
@@ -258,9 +311,11 @@ internal sealed class LuaDesktopAppSession : IDesktopAppSession
     }
 
 #if IL2CPPMELON
+    private static Il2CppTMPro.TextAlignmentOptions GetCenterAlignment() => Il2CppTMPro.TextAlignmentOptions.Center;
     private static Il2CppTMPro.TextAlignmentOptions GetLeftAlignment() => Il2CppTMPro.TextAlignmentOptions.MidlineLeft;
     private static Il2CppTMPro.TextAlignmentOptions GetRightAlignment() => Il2CppTMPro.TextAlignmentOptions.MidlineRight;
 #else
+    private static TMPro.TextAlignmentOptions GetCenterAlignment() => TMPro.TextAlignmentOptions.Center;
     private static TMPro.TextAlignmentOptions GetLeftAlignment() => TMPro.TextAlignmentOptions.MidlineLeft;
     private static TMPro.TextAlignmentOptions GetRightAlignment() => TMPro.TextAlignmentOptions.MidlineRight;
 #endif

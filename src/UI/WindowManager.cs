@@ -4,8 +4,10 @@ using UsableComputer.API;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
+using UnityEngine.InputSystem;
 
 #if IL2CPPMELON
+using Il2CppInterop.Runtime;
 using S1GameInput = Il2CppScheduleOne.GameInput;
 using S1Text = Il2CppTMPro.TextMeshProUGUI;
 #elif MONOMELON
@@ -20,6 +22,7 @@ internal sealed class WindowManager : IDisposable
     private readonly RectTransform _windowLayer;
     private readonly RectTransform _taskbarApps;
     private readonly Action<string> _requestOpenApp;
+    internal DesktopFileInteraction FileInteraction { get; }
     private Camera? _eventCamera;
     private readonly List<DesktopWindow> _windows = new();
     private bool _disposed;
@@ -28,12 +31,14 @@ internal sealed class WindowManager : IDisposable
         RectTransform windowLayer,
         RectTransform taskbarApps,
         Camera? eventCamera,
-        Action<string> requestOpenApp)
+        Action<string> requestOpenApp,
+        DesktopFileInteraction fileInteraction)
     {
         _windowLayer = windowLayer;
         _taskbarApps = taskbarApps;
         _eventCamera = eventCamera;
         _requestOpenApp = requestOpenApp ?? throw new ArgumentNullException(nameof(requestOpenApp));
+        FileInteraction = fileInteraction;
     }
 
     internal DesktopWindow? Open(DesktopAppDescriptor descriptor)
@@ -130,6 +135,21 @@ internal sealed class WindowManager : IDisposable
         if (_disposed)
             return;
 
+        Mouse? mouse = Mouse.current;
+        if (mouse != null && (mouse.leftButton.wasPressedThisFrame || mouse.rightButton.wasPressedThisFrame) && EventSystem.current != null)
+        {
+            var pointer = new PointerEventData(EventSystem.current) { position = mouse.position.ReadValue() };
+#if IL2CPPMELON
+            var hits = new Il2CppSystem.Collections.Generic.List<RaycastResult>();
+#else
+            var hits = new List<RaycastResult>();
+#endif
+            _windowLayer.GetComponentInParent<Canvas>().GetComponent<GraphicRaycaster>().Raycast(pointer, hits);
+            if (hits.Count > 0)
+                foreach (DesktopWindow window in _windows)
+                    if (hits[0].gameObject.transform.IsChildOf(window.Root)) { BringToFront(window); break; }
+        }
+
         var snapshot = _windows.ToArray();
         foreach (DesktopWindow window in snapshot)
             window.Tick();
@@ -141,6 +161,18 @@ internal sealed class WindowManager : IDisposable
             return;
 
         window.Root.SetAsLastSibling();
+        foreach (DesktopWindow candidate in _windows) candidate.SetFocused(candidate == window);
+    }
+
+    internal bool HasFocusedWindow => _windows.Exists(window => window.IsFocused && window.Root != null && window.Root.gameObject.activeSelf);
+    internal void ClearFocus() { foreach (DesktopWindow window in _windows) window.SetFocused(false); }
+
+    internal void FocusTopWindow()
+    {
+        DesktopWindow? top = null;
+        foreach (DesktopWindow window in _windows)
+            if (window.Root.gameObject.activeSelf && (top == null || window.Root.GetSiblingIndex() > top.Root.GetSiblingIndex())) top = window;
+        foreach (DesktopWindow window in _windows) window.SetFocused(window == top);
     }
 
     internal void SetEventCamera(Camera? eventCamera)
@@ -172,6 +204,7 @@ internal sealed class WindowManager : IDisposable
             return;
 
         RelayoutTaskbar();
+        FocusTopWindow();
     }
 
     public void Dispose()
@@ -180,9 +213,14 @@ internal sealed class WindowManager : IDisposable
             return;
 
         _disposed = true;
-        for (int index = _windows.Count - 1; index >= 0; index--)
-            _windows[index].Dispose();
-        _windows.Clear();
+        CloseAll();
+    }
+
+    internal void CloseAll()
+    {
+        // Disposal callbacks may change the live window list.
+        foreach (DesktopWindow window in _windows.ToArray())
+            window.Dispose();
     }
 
     private void RelayoutTaskbar()
@@ -224,12 +262,15 @@ internal sealed class DesktopWindow : IDisposable
     private bool _sessionOpened;
     private bool _disposed;
     private bool _dragging;
+    private int _dragPointerId;
     private Vector2 _dragOffset;
     private bool _tickFaultLogged;
     private bool _maximized;
     private Vector2 _restoreSize;
     private Vector2 _restorePosition;
     private S1Text? _maximizeLabel;
+    private Image _titleBar = null!;
+    internal bool IsFocused { get; private set; }
 
     internal DesktopWindow(
         WindowManager manager,
@@ -269,6 +310,8 @@ internal sealed class DesktopWindow : IDisposable
             _manager.RequestOpenApp,
             value => S1GameInput.IsTyping = value,
             _manager.OpenFile);
+        _context.FileInteraction = _manager.FileInteraction;
+        _context.IsFocused = () => IsFocused;
         IDesktopAppSession? createdSession = _descriptor.CreateSession(_context);
         if (createdSession == null)
         {
@@ -347,6 +390,9 @@ internal sealed class DesktopWindow : IDisposable
             return;
 
         Root.gameObject.SetActive(visible);
+        if (!visible)
+            _dragging = false;
+        _manager.FocusTopWindow();
         if (_session is IDesktopAppVisibilitySession visibilitySession)
             visibilitySession.OnVisibilityChanged(visible);
     }
@@ -428,6 +474,7 @@ internal sealed class DesktopWindow : IDisposable
         Root.anchoredPosition = _descriptor.PreferredWindowPosition;
 
         GameObject titleBar = UiFactory.CreatePanel(rootObject.transform, "TitleBar", UiFactory.TitleBar);
+        _titleBar = titleBar.GetComponent<Image>();
         RectTransform titleBarRect = titleBar.GetComponent<RectTransform>();
         titleBarRect.anchorMin = new Vector2(0f, 1f);
         titleBarRect.anchorMax = new Vector2(1f, 1f);
@@ -519,6 +566,13 @@ internal sealed class DesktopWindow : IDisposable
         _listeners.AddTrigger(titleTrigger, EventTriggerType.PointerDown, OnPointerDown);
         _listeners.AddTrigger(titleTrigger, EventTriggerType.Drag, OnDrag);
         _listeners.AddTrigger(titleTrigger, EventTriggerType.PointerUp, OnPointerUp);
+        _listeners.AddTrigger(titleTrigger, EventTriggerType.EndDrag, OnPointerUp);
+        _listeners.AddTrigger(titleTrigger, EventTriggerType.PointerClick, data =>
+        {
+            PointerEventData? pointer = PointerEvents.Get(data);
+            if (pointer != null && pointer.button == PointerEventData.InputButton.Left && pointer.clickCount == 2)
+                ToggleMaximized();
+        });
 
         UiFactory.SetLayerRecursively(rootObject, Constants.UiLayer);
         UiFactory.SetLayerRecursively(TaskbarButton.gameObject, Constants.UiLayer);
@@ -551,7 +605,9 @@ internal sealed class DesktopWindow : IDisposable
         if (_disposed)
             return;
 
-        if (Root.gameObject.activeSelf)
+        if (Root.gameObject.activeSelf && IsFocused)
+            SetVisible(false);
+        else if (Root.gameObject.activeSelf)
             _manager.BringToFront(this);
         else
         {
@@ -562,7 +618,8 @@ internal sealed class DesktopWindow : IDisposable
 
     private void OnPointerDown(BaseEventData data)
     {
-        if (data is not PointerEventData pointer || _disposed || _maximized)
+        PointerEventData? pointer = GetPointerData(data);
+        if (pointer == null || pointer.button != PointerEventData.InputButton.Left || _disposed || _maximized)
             return;
 
         _manager.BringToFront(this);
@@ -573,13 +630,15 @@ internal sealed class DesktopWindow : IDisposable
                 out Vector2 localPoint))
         {
             _dragOffset = localPoint - (Vector2)Root.localPosition;
+            _dragPointerId = pointer.pointerId;
             _dragging = true;
         }
     }
 
     private void OnDrag(BaseEventData data)
     {
-        if (!_dragging || data is not PointerEventData pointer || _disposed || _maximized)
+        PointerEventData? pointer = GetPointerData(data);
+        if (!_dragging || pointer == null || pointer.pointerId != _dragPointerId || _disposed || _maximized)
             return;
 
         if (!RectTransformUtility.ScreenPointToLocalPointInRectangle(
@@ -592,16 +651,37 @@ internal sealed class DesktopWindow : IDisposable
         }
 
         Vector2 desired = localPoint - _dragOffset;
-        Vector2 halfParent = _parent.rect.size * 0.5f;
         Vector2 halfWindow = Root.rect.size * 0.5f;
-        desired.x = Mathf.Clamp(desired.x, -halfParent.x + halfWindow.x, halfParent.x - halfWindow.x);
-        desired.y = Mathf.Clamp(desired.y, -halfParent.y + halfWindow.y, halfParent.y - halfWindow.y);
+        Rect desktop = _parent.rect;
+        float maximumX = desktop.xMax - halfWindow.x;
+        float maximumY = desktop.yMax - halfWindow.y;
+        // Keep the title bar reachable even for an app larger than the desktop.
+        desired.x = Mathf.Clamp(desired.x, Mathf.Min(desktop.xMin + halfWindow.x, maximumX), maximumX);
+        desired.y = Mathf.Clamp(desired.y, Mathf.Min(desktop.yMin + 42f + halfWindow.y, maximumY), maximumY);
         Root.localPosition = new Vector3(desired.x, desired.y, Root.localPosition.z);
     }
 
     private void OnPointerUp(BaseEventData data)
     {
-        _dragging = false;
+        PointerEventData? pointer = GetPointerData(data);
+        if (pointer != null && pointer.pointerId == _dragPointerId)
+            _dragging = false;
+    }
+
+    internal void SetFocused(bool focused)
+    {
+        IsFocused = focused;
+        if (_titleBar != null) _titleBar.color = focused ? UiFactory.TitleBar : UiFactory.TitleBarDark;
+    }
+
+    private static PointerEventData? GetPointerData(BaseEventData data)
+    {
+#if IL2CPPMELON
+        // Native callbacks can wrap a PointerEventData as its declared base type.
+        return data.TryCast<PointerEventData>();
+#else
+        return data as PointerEventData;
+#endif
     }
 
     private void Close()

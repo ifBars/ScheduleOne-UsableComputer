@@ -81,6 +81,7 @@ public sealed class Core : MelonMod
         {
             MelonLogger.Error($"[NestedGameHost] Initialization failed: {exception}");
             WriteError();
+            Application.Quit();
         }
     }
 
@@ -304,13 +305,18 @@ public sealed class Core : MelonMod
 
     private static void PatchChildDisplaySettings()
     {
-        Type? settingsType = AccessTools.TypeByName("ScheduleOne.DevUtilities.Settings");
+#if IL2CPPMELON
+        const string settingsTypeName = "Il2CppScheduleOne.DevUtilities.Settings, Assembly-CSharp";
+#else
+        const string settingsTypeName = "ScheduleOne.DevUtilities.Settings, Assembly-CSharp";
+#endif
+        Type? settingsType = Type.GetType(settingsTypeName, throwOnError: false);
         var applyMethod = settingsType == null
             ? null
             : AccessTools.Method(settingsType, "ApplyDisplaySettings");
         var prefixMethod = AccessTools.Method(typeof(Core), nameof(SkipDisplaySettings));
         if (applyMethod == null || prefixMethod == null)
-            throw new MissingMethodException("Could not patch Schedule I display settings for the nested process.");
+            throw new MissingMethodException($"Could not patch {settingsTypeName}.ApplyDisplaySettings for the nested process.");
 
         new HarmonyLib.Harmony("UsableComputer.NestedGame.DisplaySettings")
             .Patch(applyMethod, prefix: new HarmonyMethod(prefixMethod));

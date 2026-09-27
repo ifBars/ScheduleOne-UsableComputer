@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 
 namespace UsableComputer.Scripting;
 
@@ -18,6 +19,7 @@ internal static class LuaAppTemplates
 {
     internal static IReadOnlyList<LuaAppTemplate> All { get; } = new[]
     {
+        new LuaAppTemplate("Shift Checklist", ReadChecklist()),
         new LuaAppTemplate("Notes", """
             local note = "Replace this text with your own app state or instructions."
 
@@ -162,4 +164,12 @@ internal static class LuaAppTemplates
             }
             """),
     };
+
+    private static string ReadChecklist()
+    {
+        using Stream stream = typeof(LuaAppTemplates).Assembly.GetManifestResourceStream("UsableComputer.Templates.ShiftChecklist.lua")
+            ?? throw new InvalidDataException("The bundled Shift Checklist template is missing.");
+        using var reader = new StreamReader(stream);
+        return reader.ReadToEnd();
+    }
 }

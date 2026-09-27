@@ -142,7 +142,7 @@ internal sealed class UsableComputerController : IDisposable
                 throw new InvalidOperationException("The in-game state machine is not available yet.");
 
             _state.InitializeDefaultParent(sceneState.InGame);
-            _desktop = new DesktopShell(_screenAnchor, null, Close);
+            _desktop = new DesktopShell(_screenAnchor, null);
             _isReady = true;
             MelonLoader.MelonLogger.Msg(
                 $"[{Constants.ModName}] Attached native computer lifecycle to '{_builtObject.name}'.");
@@ -353,6 +353,7 @@ internal sealed class UsableComputerController : IDisposable
             return;
 
         exitAction.Use();
+        if (_desktop?.TryHandleEscape() == true) return;
         Close();
     }
 

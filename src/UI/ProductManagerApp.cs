@@ -8,13 +8,15 @@ using UnityEngine.UI;
 
 #if IL2CPPMELON
 using S1Text = Il2CppTMPro.TextMeshProUGUI;
+using ProductOverflow = Il2CppTMPro.TextOverflowModes;
 #elif MONOMELON
 using S1Text = TMPro.TextMeshProUGUI;
+using ProductOverflow = TMPro.TextOverflowModes;
 #endif
 
 namespace UsableComputer.UI;
 
-internal sealed class ProductManagerApp : IDesktopAppSession
+internal sealed partial class ProductManagerApp : IDesktopAppSession
 {
     private UiListenerRegistry _rowListeners = new();
     private readonly List<ProductViewModel> _products = new();
@@ -31,10 +33,13 @@ internal sealed class ProductManagerApp : IDesktopAppSession
     private string? _selectedProductId;
     private float _nextRefresh;
     private bool _disposed;
+    private bool _dataAvailable;
 
     internal ProductManagerApp(DesktopAppContext context)
     {
+        _context = context;
         Build(context.Container, context.Listeners);
+        BuildCatalogueControls(context);
     }
 
     public void OnOpened()
@@ -42,13 +47,14 @@ internal sealed class ProductManagerApp : IDesktopAppSession
         RefreshFromNative(forceRows: true);
     }
 
-    public void OnClosed()
-    {
-    }
+    public void OnClosed() => _context.SetTyping(false);
 
     public void OnTick()
     {
-        if (_disposed || Time.unscaledTime < _nextRefresh)
+        if (_disposed) return;
+        UpdateGridSize();
+        UpdateStatus();
+        if (Time.unscaledTime < _nextRefresh)
             return;
 
         _nextRefresh = Time.unscaledTime + 1f;
@@ -88,9 +94,9 @@ internal sealed class ProductManagerApp : IDesktopAppSession
         GameObject listPanel = UiFactory.CreatePanel(parent, "ProductList", UiFactory.SurfaceRaised);
         RectTransform listRect = listPanel.GetComponent<RectTransform>();
         listRect.anchorMin = new Vector2(0f, 0f);
-        listRect.anchorMax = new Vector2(0.46f, 1f);
+        listRect.anchorMax = new Vector2(0.6f, 1f);
         listRect.offsetMin = new Vector2(8f, 8f);
-        listRect.offsetMax = new Vector2(-6f, -74f);
+        listRect.offsetMax = new Vector2(-6f, -112f);
 
         S1Text listHeading = UiFactory.CreateText(
             listPanel.transform,
@@ -115,7 +121,7 @@ internal sealed class ProductManagerApp : IDesktopAppSession
         viewportRect.anchorMin = Vector2.zero;
         viewportRect.anchorMax = Vector2.one;
         viewportRect.offsetMin = new Vector2(8f, 8f);
-        viewportRect.offsetMax = new Vector2(-8f, -42f);
+        viewportRect.offsetMax = new Vector2(-24f, -42f);
         viewportObject.AddComponent<RectMask2D>();
 
         GameObject listContent = new GameObject("ProductRows");
@@ -136,13 +142,27 @@ internal sealed class ProductManagerApp : IDesktopAppSession
         grid.constraintCount = 3;
         _productScroll.viewport = viewportRect;
         _productScroll.content = _productList;
+        GameObject track = UiFactory.CreatePanel(listPanel.transform, "ProductScrollbar", UiFactory.SurfaceInset);
+        RectTransform trackRect = track.GetComponent<RectTransform>();
+        trackRect.anchorMin = new Vector2(1f, 0f);
+        trackRect.anchorMax = Vector2.one;
+        trackRect.offsetMin = new Vector2(-20f, 8f);
+        trackRect.offsetMax = new Vector2(-8f, -42f);
+        GameObject thumb = UiFactory.CreatePanel(track.transform, "Handle", UiFactory.SurfaceRaised);
+        UiFactory.Stretch(thumb.GetComponent<RectTransform>(), Vector2.zero);
+        var scrollbar = track.AddComponent<Scrollbar>();
+        scrollbar.handleRect = thumb.GetComponent<RectTransform>();
+        scrollbar.targetGraphic = thumb.GetComponent<Image>();
+        scrollbar.direction = Scrollbar.Direction.BottomToTop;
+        _productScroll.verticalScrollbar = scrollbar;
+        _productScroll.verticalScrollbarVisibility = ScrollRect.ScrollbarVisibility.AutoHide;
 
         GameObject detailPanel = UiFactory.CreatePanel(parent, "ProductDetails", UiFactory.SurfaceRaised);
         RectTransform detailRect = detailPanel.GetComponent<RectTransform>();
-        detailRect.anchorMin = new Vector2(0.46f, 0f);
+        detailRect.anchorMin = new Vector2(0.6f, 0f);
         detailRect.anchorMax = Vector2.one;
         detailRect.offsetMin = new Vector2(6f, 8f);
-        detailRect.offsetMax = new Vector2(-8f, -74f);
+        detailRect.offsetMax = new Vector2(-8f, -112f);
 
         _detailTitle = UiFactory.CreateText(
             detailPanel.transform,
@@ -153,17 +173,21 @@ internal sealed class ProductManagerApp : IDesktopAppSession
             GetHeadingAlignment(),
             bold: true);
         SetTopRect(_detailTitle.rectTransform, 30f, -12f);
-        _detailTitle.rectTransform.sizeDelta = new Vector2(-150f, 30f);
-        _detailTitle.rectTransform.anchoredPosition = new Vector2(58f, -12f);
+        SetTopRect(_detailTitle.rectTransform, 44f, -112f);
+        _detailTitle.richText = false;
+        _detailTitle.enableAutoSizing = true;
+        _detailTitle.fontSizeMin = 13f;
+        _detailTitle.fontSizeMax = 19f;
+        _detailTitle.overflowMode = ProductOverflow.Ellipsis;
 
         GameObject detailIconObject = new("ProductIcon");
         detailIconObject.transform.SetParent(detailPanel.transform, false);
         RectTransform detailIconRect = detailIconObject.AddComponent<RectTransform>();
-        detailIconRect.anchorMin = new Vector2(0f, 1f);
-        detailIconRect.anchorMax = new Vector2(0f, 1f);
-        detailIconRect.pivot = new Vector2(0f, 1f);
+        detailIconRect.anchorMin = new Vector2(0.5f, 1f);
+        detailIconRect.anchorMax = new Vector2(0.5f, 1f);
+        detailIconRect.pivot = new Vector2(0.5f, 1f);
         detailIconRect.sizeDelta = new Vector2(96f, 96f);
-        detailIconRect.anchoredPosition = new Vector2(14f, -14f);
+        detailIconRect.anchoredPosition = new Vector2(0f, -10f);
         _detailIcon = detailIconObject.AddComponent<Image>();
         _detailIcon.color = Color.white;
         _detailIcon.preserveAspect = true;
@@ -177,8 +201,8 @@ internal sealed class ProductManagerApp : IDesktopAppSession
             UiFactory.TextMuted,
             GetHeadingAlignment());
         SetTopRect(_detailIdentity.rectTransform, 24f, -50f);
-        _detailIdentity.rectTransform.sizeDelta = new Vector2(-150f, 24f);
-        _detailIdentity.rectTransform.anchoredPosition = new Vector2(58f, -50f);
+        SetTopRect(_detailIdentity.rectTransform, 20f, -156f);
+        _detailIdentity.richText = false;
 
         _detailValue = UiFactory.CreateText(
             detailPanel.transform,
@@ -189,8 +213,8 @@ internal sealed class ProductManagerApp : IDesktopAppSession
             GetHeadingAlignment(),
             bold: true);
         SetTopRect(_detailValue.rectTransform, 28f, -82f);
-        _detailValue.rectTransform.sizeDelta = new Vector2(-150f, 28f);
-        _detailValue.rectTransform.anchoredPosition = new Vector2(58f, -82f);
+        SetTopRect(_detailValue.rectTransform, 24f, -178f);
+        _detailValue.fontSize = 15f;
 
         _listedLabel = UiFactory.CreateText(
             detailPanel.transform,
@@ -199,7 +223,8 @@ internal sealed class ProductManagerApp : IDesktopAppSession
             15f,
             UiFactory.TextMuted,
             GetHeadingAlignment());
-        SetTopRect(_listedLabel.rectTransform, 28f, -128f);
+        SetTopRect(_listedLabel.rectTransform, 30f, -204f);
+        _listedLabel.fontSize = 12f;
 
         _listedButton = UiFactory.CreateButton(
             detailPanel.transform,
@@ -230,17 +255,8 @@ internal sealed class ProductManagerApp : IDesktopAppSession
         favouriteLabel.text = "Toggle favourite";
         listeners.Add(ToggleFavourited, _favouriteButton.onClick);
 
-        S1Text note = UiFactory.CreateText(
-            detailPanel.transform,
-            "Note",
-            "Listing changes use the native ProductManager service. If its network singleton is not ready, this view remains read-only.",
-            13f,
-            UiFactory.TextMuted,
-            GetBodyAlignment());
-        note.rectTransform.anchorMin = Vector2.zero;
-        note.rectTransform.anchorMax = Vector2.one;
-        note.rectTransform.offsetMin = new Vector2(14f, 68f);
-        note.rectTransform.offsetMax = new Vector2(-14f, -174f);
+        SetActionRect(_listedButton.GetComponent<RectTransform>(), 44f);
+        SetActionRect(_favouriteButton.GetComponent<RectTransform>(), 8f);
 
         UiFactory.SetLayerRecursively(listPanel, Constants.UiLayer);
         UiFactory.SetLayerRecursively(detailPanel, Constants.UiLayer);
@@ -248,7 +264,7 @@ internal sealed class ProductManagerApp : IDesktopAppSession
 
     private void RefreshFromNative(bool forceRows)
     {
-        List<ProductViewModel> fresh = ProductManagerNativeAdapter.ReadDiscoveredProducts();
+        List<ProductViewModel> fresh = ProductManagerNativeAdapter.ReadDiscoveredProducts(out _dataAvailable);
         bool rowsChanged = forceRows || !SameProductTiles(_products, fresh);
         _products.Clear();
         _products.AddRange(fresh);
@@ -257,7 +273,7 @@ internal sealed class ProductManagerApp : IDesktopAppSession
             _selectedProductId = _products.Count > 0 ? _products[0].Id : null;
 
         if (rowsChanged)
-            RebuildProductRows();
+            ApplyCatalogue(resetScroll: false);
 
         UpdateDetail();
     }
@@ -269,13 +285,12 @@ internal sealed class ProductManagerApp : IDesktopAppSession
 
         _rowListeners.Dispose();
         _rowListeners = new UiListenerRegistry();
-        int rowCount = Mathf.CeilToInt(_products.Count / 3f);
-        _productList.sizeDelta = new Vector2(0f, Mathf.Max(1f, (rowCount * 102f) + 8f));
-        _productList.anchoredPosition = Vector2.zero;
+        float scrollPosition = _productScroll?.verticalNormalizedPosition ?? 1f;
+        ApplyGridSize();
         if (_productScroll != null)
         {
             _productScroll.StopMovement();
-            _productScroll.verticalNormalizedPosition = 1f;
+            _productScroll.verticalNormalizedPosition = scrollPosition;
         }
 
         for (int index = _productList.childCount - 1; index >= 0; index--)
@@ -285,15 +300,15 @@ internal sealed class ProductManagerApp : IDesktopAppSession
             UnityEngine.Object.Destroy(child.gameObject);
         }
 
-        for (int index = 0; index < _products.Count; index++)
+        for (int index = 0; index < _visibleProducts.Count; index++)
         {
-            ProductViewModel product = _products[index];
+            ProductViewModel product = _visibleProducts[index];
             Sprite? productIcon = ProductManagerNativeAdapter.GetIcon(product.Id);
             Button button = UiFactory.CreateButton(
                 _productList,
                 $"Product_{index}",
                 string.Empty,
-                product.IsListed ? new Color(0.78f, 0.9f, 0.76f, 1f) : UiFactory.SurfaceInset,
+                product.Id == _selectedProductId ? UiFactory.Accent : UiFactory.SurfaceInset,
                 out S1Text buttonLabel);
             buttonLabel.gameObject.SetActive(false);
 
@@ -303,7 +318,7 @@ internal sealed class ProductManagerApp : IDesktopAppSession
             iconRect.anchorMin = new Vector2(0.5f, 1f);
             iconRect.anchorMax = new Vector2(0.5f, 1f);
             iconRect.pivot = new Vector2(0.5f, 1f);
-            iconRect.sizeDelta = new Vector2(58f, 58f);
+            iconRect.sizeDelta = new Vector2(_compact ? 40f : 74f, _compact ? 40f : 74f);
             iconRect.anchoredPosition = new Vector2(0f, -5f);
             Image icon = iconObject.AddComponent<Image>();
             icon.sprite = productIcon;
@@ -315,29 +330,32 @@ internal sealed class ProductManagerApp : IDesktopAppSession
                 button.transform,
                 "Name",
                 product.Name,
-                10.5f,
-                UiFactory.TextPrimary,
+                _compact ? 11f : 13f,
+                product.Id == _selectedProductId ? UiFactory.TextOnAccent : UiFactory.TextPrimary,
                 GetCenterAlignment());
             name.rectTransform.anchorMin = new Vector2(0f, 0f);
             name.rectTransform.anchorMax = new Vector2(1f, 0f);
             name.rectTransform.pivot = new Vector2(0.5f, 0f);
             name.rectTransform.sizeDelta = new Vector2(-4f, 29f);
-            name.rectTransform.anchoredPosition = new Vector2(0f, 3f);
+            name.rectTransform.anchoredPosition = new Vector2(0f, 20f);
+            name.richText = false;
+            name.overflowMode = ProductOverflow.Ellipsis;
+            AddTileSummary(button.transform, product);
 
             if (product.IsFavourited)
             {
                 S1Text favourite = UiFactory.CreateText(
                     button.transform,
                     "Favourite",
-                    "★",
-                    16f,
-                    new Color(0.95f, 0.65f, 0.08f, 1f),
+                    "FAV",
+                    9f,
+                    product.Id == _selectedProductId ? UiFactory.TextOnAccent : UiFactory.TextPrimary,
                     GetCenterAlignment(),
                     bold: true);
                 favourite.rectTransform.anchorMin = new Vector2(1f, 1f);
                 favourite.rectTransform.anchorMax = new Vector2(1f, 1f);
                 favourite.rectTransform.pivot = new Vector2(1f, 1f);
-                favourite.rectTransform.sizeDelta = new Vector2(22f, 22f);
+                favourite.rectTransform.sizeDelta = new Vector2(28f, 16f);
                 favourite.rectTransform.anchoredPosition = new Vector2(-3f, -2f);
             }
             string productId = product.Id;
@@ -345,17 +363,13 @@ internal sealed class ProductManagerApp : IDesktopAppSession
             UiFactory.SetLayerRecursively(button.gameObject, Constants.UiLayer);
         }
 
-        if (_status != null)
-        {
-            _status.text = _products.Count == 0
-                ? "No discovered products yet, or Product Manager is not ready."
-                : $"{_products.Count} discovered product{(_products.Count == 1 ? string.Empty : "s")}";
-        }
+        UpdateStatus();
     }
 
     private void SelectProduct(string productId)
     {
         _selectedProductId = productId;
+        RebuildProductRows();
         UpdateDetail();
     }
 
@@ -365,16 +379,8 @@ internal sealed class ProductManagerApp : IDesktopAppSession
         if (selected == null)
             return;
 
-        bool listed = !selected.IsListed;
-        if (ProductManagerNativeAdapter.TrySetListed(selected.Id, listed, out string message))
-        {
-            if (_status != null)
-                _status.text = message;
-        }
-        else if (_status != null)
-        {
-            _status.text = message;
-        }
+        ProductManagerNativeAdapter.TrySetListed(selected.Id, !selected.IsListed, out string message);
+        ShowFeedback(message);
 
         RefreshFromNative(forceRows: false);
     }
@@ -389,8 +395,7 @@ internal sealed class ProductManagerApp : IDesktopAppSession
             selected.Id,
             !selected.IsFavourited,
             out string message);
-        if (_status != null)
-            _status.text = message;
+        ShowFeedback(message);
 
         RefreshFromNative(forceRows: false);
     }
@@ -433,6 +438,10 @@ internal sealed class ProductManagerApp : IDesktopAppSession
         _detailIcon.enabled = selectedIcon != null;
         _listedButton.gameObject.SetActive(true);
         _favouriteButton.gameObject.SetActive(true);
+        _listedButton.interactable = _dataAvailable;
+        _favouriteButton.interactable = _dataAvailable;
+        _listedButton.GetComponentInChildren<S1Text>().text = selected.IsListed ? "Unlist product" : "List product";
+        _favouriteButton.GetComponentInChildren<S1Text>().text = selected.IsFavourited ? "Remove favourite" : "Add favourite";
     }
 
     private ProductViewModel? FindSelectedProduct()
@@ -440,7 +449,7 @@ internal sealed class ProductManagerApp : IDesktopAppSession
         if (_selectedProductId == null)
             return null;
 
-        foreach (ProductViewModel product in _products)
+        foreach (ProductViewModel product in _visibleProducts)
         {
             if (string.Equals(product.Id, _selectedProductId, StringComparison.Ordinal))
                 return product;
@@ -459,6 +468,9 @@ internal sealed class ProductManagerApp : IDesktopAppSession
         for (int index = 0; index < left.Count; index++)
         {
             if (!string.Equals(left[index].Id, right[index].Id, StringComparison.Ordinal) ||
+                left[index].Name != right[index].Name ||
+                left[index].ProductType != right[index].ProductType ||
+                left[index].MarketValue != right[index].MarketValue ||
                 left[index].IsListed != right[index].IsListed ||
                 left[index].IsFavourited != right[index].IsFavourited)
                 return false;

@@ -21,6 +21,7 @@ namespace UsableComputer.Content;
 internal static class ComputerContentRegistrar
 {
     private static bool _registered;
+    private static bool _laptopRegistered;
     private static bool _shopsAdded;
 
     internal static bool IsRegistered => _registered;
@@ -34,10 +35,9 @@ internal static class ComputerContentRegistrar
 
     internal static void Register()
     {
-        if (_registered)
+        if (_registered && _laptopRegistered)
             return;
 
-        GameObject? model = null;
         try
         {
             var donorItem = S1Registry.GetItem(Constants.DonorItemId);
@@ -66,12 +66,45 @@ internal static class ComputerContentRegistrar
                     $"Donor built root is '{donor.BuiltItem.name}', expected '{Constants.DonorBuiltRootName}'.");
             }
 
-            model = NativeComputerModelFactory.Create(donor.BuiltItem.gameObject);
+            if (!_registered)
+            {
+                RegisterItem(Constants.ItemId, "Usable Computer",
+                    "A desktop computer with a working XP-inspired interface.",
+                    donor.BuiltItem.gameObject, null);
+                _registered = true;
+            }
+
+            if (!_laptopRegistered)
+            {
+                GameObject? laptop = FindNativeLaptop();
+                if (laptop == null)
+                {
+                    MelonLogger.Warning($"[{Constants.ModName}] The special-customer laptop is unavailable in this scene.");
+                    return;
+                }
+
+                RegisterItem(Constants.LaptopItemId, "Usable Laptop",
+                    "A laptop with a working XP-inspired interface.",
+                    donor.BuiltItem.gameObject, laptop);
+                _laptopRegistered = true;
+            }
+        }
+        catch (Exception exception)
+        {
+            MelonLogger.Error($"[{Constants.ModName}] Furniture registration failed: {exception}");
+        }
+    }
+
+    private static void RegisterItem(string id, string name, string description,
+        GameObject donorBuiltItem, GameObject? laptopSource)
+    {
+        GameObject model = laptopSource == null
+            ? NativeComputerModelFactory.Create(donorBuiltItem)
+            : NativeComputerModelFactory.CreateLaptop(donorBuiltItem, laptopSource);
+        try
+        {
             FurnitureCreator.CreateBuilder()
-                .WithBasicInfo(
-                    Constants.ItemId,
-                    "Usable Computer",
-                    "A compact computer with a notes app and calculator.")
+                .WithBasicInfo(id, name, description)
                 .WithModel(model)
                 .WithPlacement(FurniturePlacementMode.Grid)
                 .WithFootprint(4, 2)
@@ -81,19 +114,31 @@ internal static class ComputerContentRegistrar
                 .WithGeneratedIcon(512)
                 .Build();
 
-            _registered = true;
-            MelonLogger.Msg(
-                $"[{Constants.ModName}] Registered '{Constants.ItemId}' from runtime native visuals.");
-        }
-        catch (Exception exception)
-        {
-            MelonLogger.Error($"[{Constants.ModName}] Furniture registration failed: {exception}");
+            MelonLogger.Msg($"[{Constants.ModName}] Registered '{id}' from runtime native visuals.");
         }
         finally
         {
-            if (model != null)
-                Object.Destroy(model);
+            Object.Destroy(model);
         }
+    }
+
+    private static GameObject? FindNativeLaptop()
+    {
+        foreach (Transform candidate in Resources.FindObjectsOfTypeAll<Transform>())
+        {
+            if (!string.Equals(candidate.name, "Laptop", StringComparison.Ordinal) ||
+                candidate.parent == null || candidate.parent.name != "ConferenceTable" ||
+                candidate.parent.parent == null || candidate.parent.parent.name != "Props" ||
+                candidate.parent.parent.parent == null || candidate.parent.parent.parent.name != "Container" ||
+                candidate.parent.parent.parent.parent == null ||
+                candidate.parent.parent.parent.parent.name != "BusinessmenCamp")
+                continue;
+
+            if (candidate.GetComponentsInChildren<Renderer>(true).Length > 0)
+                return candidate.gameObject;
+        }
+
+        return null;
     }
 
     internal static void AddToShops()
@@ -103,23 +148,14 @@ internal static class ComputerContentRegistrar
 
         try
         {
-            S1API.Items.ItemDefinition? item = S1API.Items.ItemManager.GetDefinition(Constants.ItemId);
-            if (item == null)
-            {
-                MelonLogger.Warning($"[{Constants.ModName}] Registered item could not be resolved for shops.");
-                return;
-            }
-
-            ShopManager.AddToShops(item, Constants.HardwareShop, Constants.DanHardwareShop);
-
-            bool hardwareReady = ShopManager.GetShopByName(Constants.HardwareShop)?.HasItem(Constants.ItemId) == true;
-            bool danHardwareReady = ShopManager.GetShopByName(Constants.DanHardwareShop)?.HasItem(Constants.ItemId) == true;
-            _shopsAdded = hardwareReady && danHardwareReady;
+            bool desktopReady = AddItemToShops(Constants.ItemId);
+            bool laptopReady = !_laptopRegistered || AddItemToShops(Constants.LaptopItemId);
+            _shopsAdded = desktopReady && laptopReady;
 
             if (_shopsAdded)
             {
                 MelonLogger.Msg(
-                    $"[{Constants.ModName}] Added the computer to both hardware shops.");
+                    $"[{Constants.ModName}] Added the available computers to both hardware shops.");
             }
             else
             {
@@ -131,5 +167,19 @@ internal static class ComputerContentRegistrar
         {
             MelonLogger.Error($"[{Constants.ModName}] Shop registration failed: {exception}");
         }
+    }
+
+    private static bool AddItemToShops(string id)
+    {
+        S1API.Items.ItemDefinition? item = S1API.Items.ItemManager.GetDefinition(id);
+        if (item == null)
+        {
+            MelonLogger.Warning($"[{Constants.ModName}] Registered item '{id}' could not be resolved for shops.");
+            return false;
+        }
+
+        ShopManager.AddToShops(item, Constants.HardwareShop, Constants.DanHardwareShop);
+        return ShopManager.GetShopByName(Constants.HardwareShop)?.HasItem(id) == true &&
+               ShopManager.GetShopByName(Constants.DanHardwareShop)?.HasItem(id) == true;
     }
 }

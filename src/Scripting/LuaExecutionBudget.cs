@@ -15,19 +15,21 @@ internal static class LuaExecutionBudget
         return RunFunction(script, function, "app startup");
     }
 
-    internal static DynValue RunFunction(Script script, DynValue function, string label)
+    internal static DynValue RunFunction(Script script, DynValue function, string label, params DynValue[] arguments)
     {
         if (function.Type == DataType.ClrFunction)
-            return script.Call(function);
+            return script.Call(function, arguments);
 
         DynValue coroutineValue = script.CreateCoroutine(function);
         Coroutine coroutine = coroutineValue.Coroutine;
         coroutine.AutoYieldCounter = AutoYieldInstructions;
         var stopwatch = Stopwatch.StartNew();
         DynValue result = DynValue.Nil;
+        bool firstResume = true;
         while (coroutine.State != CoroutineState.Dead)
         {
-            result = coroutine.Resume();
+            result = firstResume ? coroutine.Resume(arguments) : coroutine.Resume();
+            firstResume = false;
             if (stopwatch.Elapsed > MaximumExecutionTime)
             {
                 throw new ScriptRuntimeException(

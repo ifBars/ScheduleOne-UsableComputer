@@ -32,6 +32,7 @@
   <ItemGroup>
     <Compile Remove="tests\**\*.cs" />
     <Compile Remove="examples\**\*.cs" />
+    <EmbeddedResource Include="examples\Lua\shift-checklist.lua" LogicalName="UsableComputer.Templates.ShiftChecklist.lua" />
     <Compile Remove="vendor\**\*.cs" />
     <Compile Remove="child\**\*.cs" />
     <PackageReference Include="MoonSharp" Version="2.0.0" GeneratePathProperty="true" />
@@ -48,6 +49,7 @@
     <Reference Include="Assembly-CSharp" HintPath="$(MonoAssembliesPath)\Assembly-CSharp.dll" Private="false" />
     <Reference Include="FishNet.Runtime" HintPath="$(MonoAssembliesPath)\FishNet.Runtime.dll" Private="false" />
     <Reference Include="MelonLoader" HintPath="$(MonoMelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(MonoMelonLoaderPath)\0Harmony.dll" Private="false" />
     <Reference Include="S1API" HintPath="$(S1ApiMonoPath)" Private="false" />
     <Reference Include="ScheduleOne.Core" HintPath="$(MonoAssembliesPath)\ScheduleOne.Core.dll" Private="false" />
     <Reference Include="UnityEngine" HintPath="$(MonoAssembliesPath)\UnityEngine.dll" Private="false" />
@@ -62,6 +64,7 @@
   <ItemGroup Condition="'$(Configuration)' == 'Il2cpp'">
     <Reference Include="Assembly-CSharp" HintPath="$(Il2CppAssembliesPath)\Assembly-CSharp.dll" Private="false" />
     <Reference Include="MelonLoader" HintPath="$(Il2CppMelonLoaderPath)\MelonLoader.dll" Private="false" />
+    <Reference Include="0Harmony" HintPath="$(Il2CppMelonLoaderPath)\0Harmony.dll" Private="false" />
     <Reference Include="S1API" HintPath="$(S1ApiIl2CppPath)" Private="false" />
     <Reference Include="Il2CppScheduleOne.Core" HintPath="$(Il2CppAssembliesPath)\Il2CppScheduleOne.Core.dll" Private="false" />
     <Reference Include="Il2CppFishNet.Runtime" HintPath="$(Il2CppAssembliesPath)\Il2CppFishNet.Runtime.dll" Private="false" />

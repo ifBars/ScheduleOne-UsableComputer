@@ -118,6 +118,8 @@ public sealed class DesktopAppContext
     }
 
     internal UiListenerRegistry Listeners => _listeners;
+    internal DesktopFileInteraction FileInteraction { get; set; } = null!;
+    internal Func<bool> IsFocused { get; set; } = () => false;
 
     internal void SetEventCamera(Camera? eventCamera)
     {

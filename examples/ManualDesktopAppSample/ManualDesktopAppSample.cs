@@ -16,6 +16,8 @@ public sealed class ManualDesktopAppMod : MelonMod
 {
     private const string AppId = "manual-sample";
     private bool _registered;
+    private Texture2D? _iconTexture;
+    private Sprite? _icon;
 
     public override void OnInitializeMelon()
     {
@@ -28,7 +30,8 @@ public sealed class ManualDesktopAppMod : MelonMod
                     "S",
                     new Vector2(420f, 280f),
                     new Vector2(0f, 0f),
-                    context => new ManualDesktopAppSession(context)));
+                    context => new ManualDesktopAppSession(context),
+                    resolveIcon: ResolveIcon));
             _registered = true;
         }
         catch (InvalidOperationException exception)
@@ -41,6 +44,41 @@ public sealed class ManualDesktopAppMod : MelonMod
     {
         if (_registered)
             DesktopAppRegistry.Unregister(AppId);
+        if (_icon != null)
+            UnityEngine.Object.Destroy(_icon);
+        if (_iconTexture != null)
+            UnityEngine.Object.Destroy(_iconTexture);
+        _icon = null;
+        _iconTexture = null;
+    }
+
+    private Sprite ResolveIcon()
+    {
+        if (_icon != null)
+            return _icon;
+
+        // Create once on demand; the registering mod retains ownership of its artwork.
+        const int size = 32;
+        _iconTexture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+        {
+            name = "ManualSampleIconTexture",
+            filterMode = FilterMode.Point,
+            wrapMode = TextureWrapMode.Clamp,
+        };
+        var pixels = new Color32[size * size];
+        for (int y = 4; y < 28; y++)
+        for (int x = 4; x < 28; x++)
+        {
+            bool border = x < 7 || x > 24 || y < 7 || y > 24;
+            bool mark = y >= 10 && y <= 21 && (x == 11 || x == 20 || y == 15);
+            pixels[y * size + x] = border ? new Color32(21, 55, 109, 255)
+                : mark ? new Color32(255, 255, 255, 255) : new Color32(38, 115, 196, 255);
+        }
+        _iconTexture.SetPixels32(pixels);
+        _iconTexture.Apply(false, true);
+        _icon = Sprite.Create(_iconTexture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+        _icon.name = "ManualSampleIcon";
+        return _icon;
     }
 }
 

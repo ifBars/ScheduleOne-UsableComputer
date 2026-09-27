@@ -78,6 +78,30 @@ public sealed class Core : MelonMod
         _computerModel = null;
     }
 
+    private void VerifyGroundAlignment(GameObject model, float floorHeight)
+    {
+        float minimum = float.PositiveInfinity;
+        foreach (MeshFilter filter in model.GetComponentsInChildren<MeshFilter>(true))
+        {
+            if (filter.sharedMesh == null)
+                continue;
+
+            Bounds bounds = filter.sharedMesh.bounds;
+            for (int corner = 0; corner < 8; corner++)
+            {
+                var point = new Vector3(
+                    (corner & 1) == 0 ? bounds.min.x : bounds.max.x,
+                    (corner & 2) == 0 ? bounds.min.y : bounds.max.y,
+                    (corner & 4) == 0 ? bounds.min.z : bounds.max.z);
+                minimum = Mathf.Min(minimum, filter.transform.TransformPoint(point).y);
+            }
+        }
+
+        Require(Math.Abs(minimum - floorHeight) < 0.03f,
+            $"Computer feet do not align with the placement floor: feet={minimum}, floor={floorHeight}");
+        LoggerInstance.Msg($"[UsableComputerDisplaySmoke] Ground alignment verified: feet={minimum}, floor={floorHeight}");
+    }
+
     private IEnumerator StartFixture()
     {
         float deadline = Time.realtimeSinceStartup + 30f;
@@ -159,6 +183,13 @@ public sealed class Core : MelonMod
                 ?? throw new InvalidOperationException("The laundering station donor is unavailable.");
             donorWidth = CalculateWidth(donor.BuiltItem.gameObject.GetComponentsInChildren<Renderer>(true));
             _computerModel = CreateComputerModel(assembly, donor.BuiltItem.gameObject);
+            VerifyGroundAlignment(_computerModel, 0f);
+            BuildableItemDefinition placedDefinition = S1Registry.GetItem("usable_computer") as BuildableItemDefinition
+                ?? throw new InvalidOperationException("The registered computer is unavailable.");
+            var gridItem = (ScheduleOne.EntityFramework.GridItem)placedDefinition.BuiltItem;
+            Transform placedVisual = gridItem.transform.Find("FurnitureVisual")
+                ?? throw new InvalidOperationException("The registered computer has no furniture visual.");
+            VerifyGroundAlignment(placedVisual.gameObject, gridItem.OriginFootprint.transform.position.y);
             rendererCount = _computerModel.GetComponentsInChildren<Renderer>(true).Length;
             colliderCount = _computerModel.GetComponentsInChildren<Collider>(true).Length;
             modelWidth = CalculateWidth(_computerModel.GetComponentsInChildren<Renderer>(true));
@@ -187,7 +218,7 @@ public sealed class Core : MelonMod
                 shellType,
                 BindingFlags.Instance | BindingFlags.NonPublic,
                 binder: null,
-                args: new object[] { screenAnchor, camera, new Action(() => { }) },
+                args: new object[] { screenAnchor, camera },
                 culture: null) ?? throw new InvalidOperationException("DesktopShell could not be created.");
             shellType.GetMethod("Show", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(shell, null);
             shellType.GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!
@@ -242,6 +273,25 @@ public sealed class Core : MelonMod
 
         Screen.SetResolution(1280, 720, false);
         yield return new WaitForSecondsRealtime(2f);
+
+        IEnumerator interaction = DesktopInteractionScenario.Run(
+            GameObject.Find("UsableComputer_DesktopCanvas"), Camera.main!, _outputDirectory);
+        while (true)
+        {
+            object? current;
+            try
+            {
+                if (!interaction.MoveNext())
+                    break;
+                current = interaction.Current;
+            }
+            catch (Exception exception)
+            {
+                Fail("Desktop interaction validation failed", Unwrap(exception));
+                yield break;
+            }
+            yield return current;
+        }
 
         string screenshotPath = Path.Combine(_outputDirectory, "display.png");
         try

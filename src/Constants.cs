@@ -6,6 +6,7 @@ internal static class Constants
     internal const string ModVersion = "1.0.0";
     internal const string ModAuthor = "Bars";
     internal const string ItemId = "usable_computer";
+    internal const string LaptopItemId = "usable_laptop";
     internal const string DonorItemId = "launderingstation";
     internal const string DonorBuiltRootName = "LaunderingStation_Built";
     internal const string InteractionMessage = "Use computer";
@@ -21,6 +22,10 @@ internal static class Constants
     internal const string CalculatorAppId = "calculator";
     internal const string AboutAppId = "about";
     internal const string JournalAppId = "journal";
+    internal const string ReportsAppId = "bank-reports";
+    internal const string DeliveriesAppId = "deliveries";
+    internal const string DealersAppId = "dealers";
+    internal const string SystemMonitorAppId = "system-monitor";
     internal const string ProductManagerAppId = "product-manager";
     internal const string AppStudioAppId = "app-studio";
     internal const string SettingsAppId = "settings";

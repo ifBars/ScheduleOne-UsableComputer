@@ -4,6 +4,8 @@
 
 Use App Studio for a Lua dashboard, or register a C# app from another mod.
 
+For a practical starting point, choose **Templates → Shift Checklist** in App Studio, then **Save & Run**. Its checkboxes remember completed tasks in the host save. The [example source](../examples/Lua/shift-checklist.lua) is also available to edit outside the game. See the [Lua API contract](lua-api-v1.md) for checkbox callbacks and storage limits.
+
 ## Lua apps
 
 App Studio saves Lua apps to `UserData/UsableComputer/Apps` and hot-loads them without restarting the game. Scripts can read player, money, property, employee, product, and quest data through a small S1API-backed surface.
@@ -26,7 +28,31 @@ return {
 }
 ```
 
-Lua apps cannot access the filesystem, operating system, CLR, Unity objects, or raw S1API types. Source is limited to 64 KiB, rendered output is limited to 64 rows, and each invocation has a 250 ms execution budget.
+Lua apps cannot access the filesystem, operating system, CLR, Unity objects, or raw S1API types. Source is limited to 65,536 characters, rendered output is limited to 64 rows, and Lua execution has a cooperative 250 ms budget. See [Lua API v1](lua-api-v1.md) for the complete read surface, save-owned storage, quotas, compatibility, and sandbox limits. The [Shift Tally example](../examples/Lua/shift-tally.lua) demonstrates persistent button actions.
+
+The Lua `icon` field selects a built-in image: `notes`, `calculator`, `about`, `studio`, `journal`, `products`, `settings`, `doom`, `schedule-one`, or `generic`. Omitted or unknown names use the generic image.
+
+For custom artwork, add `icon_pixels` to the returned app table. It takes precedence over `icon` and accepts a square image of 8, 16, or 32 rows, with the same number of characters per row. Rows run from top to bottom. Use `.` for transparency and hexadecimal digits for the palette below. Invalid artwork reports its row and column where applicable; the previous installed app is preserved when validation fails.
+
+```lua
+icon_pixels = {
+  "........", ".cccccc.", ".cffffc.", ".cfccfc.",
+  ".cfccfc.", ".cffffc.", ".cccccc.", "........"
+},
+```
+
+| Pixel | Color | Pixel | Color |
+| --- | --- | --- | --- |
+| `0` | Black | `8` | Gray |
+| `1` | Maroon | `9` | Red |
+| `2` | Green | `a` | Lime |
+| `3` | Olive | `b` | Yellow |
+| `4` | Navy | `c` | Blue |
+| `5` | Purple | `d` | Magenta |
+| `6` | Teal | `e` | Cyan |
+| `7` | Silver | `f` | White |
+
+The mod creates and caches the sprite, then releases it on app replacement or shutdown. Artwork stays within the existing source-size limit and adds no filesystem or Unity access to Lua. Use C# for externally loaded or live game sprites.
 
 ## Add a C# app
 
@@ -42,10 +68,15 @@ DesktopAppRegistry.Register(new DesktopAppDescriptor(
     glyph: "M",
     preferredWindowSize: new Vector2(440f, 300f),
     preferredWindowPosition: Vector2.zero,
-    createSession: context => new MyDesktopSession(context)));
+    createSession: context => new MyDesktopSession(context),
+    resolveIcon: () => myCachedSprite));
 ```
 
 Each window gets its own `IDesktopAppSession`. Apps registered after the computer opens appear immediately, and unregistering an app closes its windows and disposes its sessions. See [`examples/ManualDesktopAppSample`](../examples/ManualDesktopAppSample) for a complete buildable example.
+
+`resolveIcon` accepts a `Func<Sprite?>` and runs when the desktop needs the app's image. Return a cached sprite owned by your mod, or resolve a live game sprite when its scene is ready. A null result or an exception falls back to the generic app image. The legacy `glyph` field does not draw a text icon.
+
+The provider can be called repeatedly, so avoid creating a new texture on every call. Keep your sprite alive while the app is registered, unregister the app before destroying mod-owned sprites and textures, and never destroy borrowed game assets. The manual sample demonstrates lazy creation, caching, and cleanup without shipping an external image.
 
 ## Virtual text files from C#
 

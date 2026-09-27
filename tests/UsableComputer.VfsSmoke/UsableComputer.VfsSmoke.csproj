@@ -25,22 +25,29 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <ProjectReference Include="../../UsableComputer.csproj" Private="false" Condition="'$(UsableComputerPackageDll)' == ''" />
+    <Reference Include="UsableComputerPackaged" HintPath="$(UsableComputerPackageDll)" Private="false" Condition="'$(UsableComputerPackageDll)' != ''" />
+    <Compile Include="..\UsableComputer.DisplaySmoke\DesktopInteractionScenario.cs" Link="DesktopInteractionScenario.cs" />
     <Reference Include="MelonLoader" HintPath="$(MelonLoaderPath)\MelonLoader.dll" Private="false" />
     <Reference Include="Assembly-CSharp" HintPath="$(ManagedPath)\Assembly-CSharp.dll" Private="false" />
     <Reference Include="UnityEngine" HintPath="$(ManagedPath)\UnityEngine.dll" Private="false" />
     <Reference Include="UnityEngine.CoreModule" HintPath="$(ManagedPath)\UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="UnityEngine.PhysicsModule" HintPath="$(ManagedPath)\UnityEngine.PhysicsModule.dll" Private="false" />
     <Reference Include="UnityEngine.ScreenCaptureModule" HintPath="$(ManagedPath)\UnityEngine.ScreenCaptureModule.dll" Private="false" />
+    <Reference Include="UnityEngine.ImageConversionModule" HintPath="$(ManagedPath)\UnityEngine.ImageConversionModule.dll" Private="false" />
     <Reference Include="UnityEngine.UI" HintPath="$(ManagedPath)\UnityEngine.UI.dll" Private="false" />
     <Reference Include="UnityEngine.UIModule" HintPath="$(ManagedPath)\UnityEngine.UIModule.dll" Private="false" />
     <Reference Include="Unity.TextMeshPro" HintPath="$(ManagedPath)\Unity.TextMeshPro.dll" Private="false" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Mono'">
+    <Reference Include="S1API" HintPath="$(S1ApiMonoPath)" Private="false" />
     <Reference Include="FishNet.Runtime" HintPath="$(ManagedPath)\FishNet.Runtime.dll" Private="false" />
     <Reference Include="ScheduleOne.Core" HintPath="$(ManagedPath)\ScheduleOne.Core.dll" Private="false" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Il2cpp'">
+    <Reference Include="S1API" HintPath="$(S1ApiIl2CppPath)" Private="false" />
     <Reference Include="Il2CppFishNet.Runtime" HintPath="$(ManagedPath)\Il2CppFishNet.Runtime.dll" Private="false" />
     <Reference Include="Il2CppScheduleOne.Core" HintPath="$(ManagedPath)\Il2CppScheduleOne.Core.dll" Private="false" />
     <Reference Include="Il2CppInterop.Runtime" HintPath="$(MelonLoaderPath)\Il2CppInterop.Runtime.dll" Private="false" />

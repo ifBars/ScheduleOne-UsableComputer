@@ -10,11 +10,17 @@ internal static class BuiltInDesktopApps
 {
     private static readonly string[] AppIds =
     {
+        NoodleNativeAdapter.AppId,
+        EggRunNativeAdapter.AppId,
         Constants.NotesAppId,
         Constants.FilesAppId,
         Constants.CalculatorAppId,
         Constants.AboutAppId,
         Constants.JournalAppId,
+        Constants.ReportsAppId,
+        Constants.DeliveriesAppId,
+        Constants.DealersAppId,
+        Constants.SystemMonitorAppId,
         Constants.ProductManagerAppId,
         Constants.AppStudioAppId,
         Constants.SettingsAppId,
@@ -24,6 +30,30 @@ internal static class BuiltInDesktopApps
 
     internal static void RegisterAll()
     {
+        Register(new DesktopAppDescriptor(EggRunNativeAdapter.AppId, "Egg Run", "", new Vector2(700f, 470f),
+            Vector2.zero, context => new EggRunApp(context), EggRunNativeAdapter.Icon));
+        Register(new DesktopAppDescriptor(NoodleNativeAdapter.AppId, "Noodle", "", new Vector2(700f, 470f),
+            Vector2.zero, context => new NoodleApp(context), NoodleNativeAdapter.Icon));
+        Register(new DesktopAppDescriptor(Constants.SystemMonitorAppId, "System Monitor", "", new Vector2(700f, 470f),
+            Vector2.zero, context => new SystemMonitorApp(context), () => RuntimeAppIcons.Get(BuiltInIcon.Settings)));
+        Register(new DesktopAppDescriptor(Constants.DealersAppId, "Dealers", "", new Vector2(700f, 470f),
+            Vector2.zero, context => new DealersApp(context), NativePhoneAppAssets.GetDealerIcon));
+        Register(new DesktopAppDescriptor(
+            Constants.DeliveriesAppId,
+            "Deliveries",
+            "D",
+            new Vector2(700f, 470f),
+            Vector2.zero,
+            context => new DeliveriesApp(context),
+            NativePhoneAppAssets.GetDeliveryIcon));
+        Register(new DesktopAppDescriptor(
+            Constants.ReportsAppId,
+            "Reports",
+            string.Empty,
+            new Vector2(700f, 470f),
+            Vector2.zero,
+            context => new BankReportsApp(context),
+            () => RuntimeAppIcons.Get(BuiltInIcon.Reports)));
         Register(
             new DesktopAppDescriptor(
                 Constants.NotesAppId,
@@ -101,7 +131,7 @@ internal static class BuiltInDesktopApps
                 Constants.DoomAppId,
                 "Doom",
                 string.Empty,
-                new Vector2(720f, 500f),
+                new Vector2(720f, 470f),
                 Vector2.zero,
                 context => new DoomApp(context),
                 () => RuntimeAppIcons.Get(BuiltInIcon.Doom)));

@@ -2,6 +2,9 @@ using MelonLoader;
 using System;
 using UsableComputer.UI;
 using UsableComputer.Logic;
+using System.Globalization;
+using System.Collections.Generic;
+using UnityEngine;
 
 namespace UsableComputer;
 
@@ -12,6 +15,8 @@ internal static class PreferencesStore
     private static MelonPreferences_Entry<string>? _wallpaper;
     private static MelonPreferences_Entry<string>? _iconSize;
     private static MelonPreferences_Entry<string>? _iconOrder;
+    private static MelonPreferences_Entry<string>? _iconPositions;
+    private static readonly Dictionary<string, Vector2> IconPositions = new();
 
     internal static event Action? IconLayoutChanged;
     internal static DesktopIconSize IconSize => DesktopIconLayout.Parse(_iconSize?.Value, DesktopIconSize.Medium);
@@ -47,6 +52,38 @@ internal static class PreferencesStore
             "Desktop icon size: Small, Medium, or Large.");
         _iconOrder = category.CreateEntry(Constants.IconOrderPreferenceKey, DesktopIconOrder.Kind.ToString(),
             "Desktop auto-arrange order: Name or Kind (folders first).");
+        _iconPositions = category.CreateEntry("DesktopIconPositions", string.Empty, "Desktop icon positions.");
+        foreach (string entry in _iconPositions.Value.Split(';'))
+        {
+            string[] parts = entry.Split('|');
+            if (parts.Length == 3 && float.TryParse(parts[1], NumberStyles.Float, CultureInfo.InvariantCulture, out float x) &&
+                float.TryParse(parts[2], NumberStyles.Float, CultureInfo.InvariantCulture, out float y) &&
+                !float.IsNaN(x) && !float.IsInfinity(x) && !float.IsNaN(y) && !float.IsInfinity(y))
+                IconPositions[parts[0]] = new Vector2(x, y);
+        }
+    }
+
+    internal static Vector2 GetIconPosition(string id, Vector2 fallback) =>
+        IconPositions.TryGetValue(id, out Vector2 position) ? position : fallback;
+
+    internal static void SetIconPosition(string id, Vector2 position)
+    {
+        EnsureInitialized();
+        IconPositions[id] = position;
+        var entries = new List<string>();
+        foreach (var pair in IconPositions)
+            if (FileSystem.VirtualFileSystemService.TryGetNode(pair.Key, out _))
+                entries.Add(pair.Key + "|" + pair.Value.x.ToString(CultureInfo.InvariantCulture) + "|" + pair.Value.y.ToString(CultureInfo.InvariantCulture));
+        _iconPositions!.Value = string.Join(";", entries);
+        MelonPreferences.Save();
+    }
+
+    internal static void ClearIconPositions()
+    {
+        EnsureInitialized();
+        IconPositions.Clear();
+        _iconPositions!.Value = string.Empty;
+        MelonPreferences.Save();
     }
 
     internal static void SetIconSize(DesktopIconSize size)
@@ -64,6 +101,7 @@ internal static class PreferencesStore
         EnsureInitialized();
         if (!Enum.IsDefined(typeof(DesktopIconOrder), order))
             return;
+        ClearIconPositions();
         _iconOrder!.Value = order.ToString();
         MelonPreferences.Save();
         IconLayoutChanged?.Invoke();

@@ -51,7 +51,7 @@ internal sealed class AboutApp : IDesktopAppSession
         S1Text body = UiFactory.CreateText(
             parent,
             "Body",
-            "Usable Computer\n\nA runtime-native computer assembled from the game's laundering-station table and computer visuals.\n\nNotes are stored globally in MelonPreferences. The calculator uses explicit button operations only.\n\nRuntime: " + Constants.RuntimeName + "\nVersion: " + Constants.ModVersion,
+            "Usable Computer\n\nA working desktop and laptop for Schedule I.\n\nDocuments and app storage belong to your save. Appearance settings are shared across saves.\n\nRuntime: " + Constants.RuntimeName + "\nVersion: " + Constants.ModVersion,
             16f,
             UiFactory.TextMuted,
             GetBodyAlignment());

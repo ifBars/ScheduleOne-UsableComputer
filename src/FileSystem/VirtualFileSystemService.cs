@@ -116,6 +116,13 @@ internal static class VirtualFileSystemService
         Commit();
     }
 
+    internal static VirtualFileSystemNode Copy(string nodeId, string destinationId)
+    {
+        VirtualFileSystemNode copy = _fileSystem.Copy(nodeId, destinationId);
+        Commit();
+        return copy;
+    }
+
     internal static void ReconcileApps()
     {
         ReconcileApps(notify: true);

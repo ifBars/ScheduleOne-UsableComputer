@@ -124,7 +124,11 @@ internal static class LuaAppManager
     }
 
     internal static bool TrySaveAndRegister(string source, out string message)
+        => TrySaveAndRegister(source, out message, out _);
+
+    internal static bool TrySaveAndRegister(string source, out string message, out string appId)
     {
+        appId = string.Empty;
         string temporaryPath = Path.Combine(AppsDirectory, "unsaved.lua");
         if (!TryCompile(source, temporaryPath, out LuaAppDefinition? definition, out message))
             return false;
@@ -139,7 +143,21 @@ internal static class LuaAppManager
             return false;
         }
 
-        File.WriteAllText(fullPath, source);
+        string pendingPath = fullPath + "." + Guid.NewGuid().ToString("N") + ".tmp";
+        try
+        {
+            File.WriteAllText(pendingPath, source);
+            if (File.Exists(fullPath)) File.Replace(pendingPath, fullPath, null);
+            else File.Move(pendingPath, fullPath);
+        }
+        finally
+        {
+            if (File.Exists(pendingPath))
+            {
+                try { File.Delete(pendingPath); }
+                catch (IOException) { }
+            }
+        }
         Register(new LuaAppDefinition(
             definition.Id,
             definition.Title,
@@ -148,8 +166,10 @@ internal static class LuaAppManager
             definition.Script,
             definition.Render,
             source,
-            fullPath));
+            fullPath,
+            definition.IconPixels));
         _lastSource = source;
+        appId = definition.RegistryId;
         message = $"Saved and loaded {definition.Title}.";
         return true;
     }
@@ -157,15 +177,22 @@ internal static class LuaAppManager
     internal static void Shutdown()
     {
         foreach (LuaAppDefinition definition in Definitions.Values.ToArray())
+        {
             DesktopAppRegistry.Unregister(definition.RegistryId);
+            definition.Dispose();
+        }
         Definitions.Clear();
         _lastSource = null;
+        AppStudioApp.ClearDrafts();
     }
 
     private static void Register(LuaAppDefinition definition)
     {
         if (Definitions.TryGetValue(definition.Id, out LuaAppDefinition? existing))
+        {
             DesktopAppRegistry.Unregister(existing.RegistryId);
+            existing.Dispose();
+        }
 
         Definitions[definition.Id] = definition;
         DesktopAppRegistry.Register(new DesktopAppDescriptor(
@@ -200,21 +227,29 @@ internal static class LuaAppManager
         {
             var script = new Script(CoreModules.Preset_HardSandbox);
             RegisterComputerApi(script);
+            string? storageAppId = null;
+            LuaApiContract.BindStorage(script, script.Globals.Get("computer").Table,
+                () => storageAppId ?? throw new ScriptRuntimeException("Storage is available in render and action callbacks, not app startup."),
+                LuaStorageService.Get, LuaStorageService.Set, LuaStorageService.Delete);
             DynValue result = LuaExecutionBudget.RunSource(script, source, sourcePath);
             if (result.Type != DataType.Table)
                 throw new ScriptRuntimeException("The file must return an app table.");
 
             Table table = result.Table;
+            LuaApiContract.Validate(table);
             string id = ReadRequiredString(table, "id", 64).ToLowerInvariant();
             if (!IdPattern.IsMatch(id))
                 throw new ScriptRuntimeException("id must be 3-64 lowercase letters, numbers, dots, underscores, or hyphens.");
             string title = ReadRequiredString(table, "title", 40);
             string icon = ReadOptionalString(table, "icon", "generic", 24);
+            LuaIconPixels? iconPixels = LuaIconPixels.Parse(table.Get("icon_pixels"));
             float width = ReadNumber(table, "width", 520f, 320f, 700f);
             float height = ReadNumber(table, "height", 340f, 220f, 470f);
             DynValue render = table.Get("render");
             if (render.Type != DataType.Function && render.Type != DataType.ClrFunction)
                 throw new ScriptRuntimeException("render must be a function that returns an array of rows.");
+
+            storageAppId = id;
 
             definition = new LuaAppDefinition(
                 id,
@@ -224,7 +259,8 @@ internal static class LuaAppManager
                 script,
                 render,
                 source,
-                sourcePath);
+                sourcePath,
+                iconPixels);
             error = string.Empty;
             return true;
         }

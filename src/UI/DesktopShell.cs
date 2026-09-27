@@ -18,9 +18,8 @@ using S1Text = TMPro.TextMeshProUGUI;
 
 namespace UsableComputer.UI;
 
-internal sealed class DesktopShell : IDisposable
+internal sealed partial class DesktopShell : IDisposable
 {
-    private readonly Action _onPowerRequested;
     private readonly Action _onRegistryChanged;
     private readonly Action _onFileSystemChanged;
     private readonly Action<DesktopAppearance, DesktopAppearance> _onAppearanceChanged;
@@ -30,6 +29,8 @@ internal sealed class DesktopShell : IDisposable
     private readonly Canvas _canvas;
     private readonly RectTransform _windowLayer;
     private readonly WindowManager _windows;
+    private readonly DesktopFileInteraction _files;
+    private string? _selectedDesktopNode;
     private readonly RuntimeWallpaper _wallpaper;
     private readonly NativeGameClock _gameClock = new();
     private readonly Button _startButton;
@@ -46,9 +47,8 @@ internal sealed class DesktopShell : IDisposable
     private bool _disposed;
     private string _lastClock = string.Empty;
 
-    internal DesktopShell(Transform screenAnchor, Camera? eventCamera, Action onPowerRequested)
+    internal DesktopShell(Transform screenAnchor, Camera? eventCamera)
     {
-        _onPowerRequested = onPowerRequested;
         _onRegistryChanged = RefreshAppSurfaces;
         _onFileSystemChanged = RefreshAppSurfaces;
         _onAppearanceChanged = ApplyAppearance;
@@ -60,10 +60,10 @@ internal sealed class DesktopShell : IDisposable
         _root.AddComponent<GraphicRaycaster>();
         _root.transform.localPosition = new Vector3(0f, 0f, 0.00015f);
         _root.transform.localRotation = Quaternion.identity;
-        _root.transform.localScale = Vector3.one * 0.00046875f;
+        _root.transform.localScale = Vector3.one * DisplayProfile.CanvasScale;
 
         RectTransform canvasRect = _root.GetComponent<RectTransform>();
-        canvasRect.sizeDelta = new Vector2(800f, 536f);
+        canvasRect.sizeDelta = new Vector2(DisplayProfile.CanvasWidth, DisplayProfile.CanvasHeight);
         _canvas = _root.GetComponent<Canvas>();
         _canvas.renderMode = RenderMode.WorldSpace;
         _canvas.worldCamera = eventCamera;
@@ -177,7 +177,12 @@ internal sealed class DesktopShell : IDisposable
         _clock.rectTransform.sizeDelta = new Vector2(84f, -8f);
         _clock.rectTransform.anchoredPosition = new Vector2(-8f, 0f);
 
-        _windows = new WindowManager(windowLayer, taskbarApps, eventCamera, OpenApp);
+        _files = new DesktopFileInteraction(canvasRect, () => _canvas.worldCamera, OpenNode);
+        _windows = new WindowManager(windowLayer, taskbarApps, eventCamera, OpenApp, _files);
+        InitializePowerScreen();
+        _files.BindBackground(viewport, () => VirtualFileSystem.DesktopId, _listeners,
+            () => SelectDesktopNode(null), () => OpenApp(Constants.SettingsAppId),
+            () => PreferencesStore.ArrangeIcons(PreferencesStore.IconOrder));
         _listeners.Add(ToggleStartMenu, _startButton.onClick);
         RefreshAppSurfaces();
 
@@ -208,6 +213,7 @@ internal sealed class DesktopShell : IDisposable
             return;
 
         _root.SetActive(true);
+        _powerInputReady = Time.realtimeSinceStartup + 0.25f;
         UpdateClock();
     }
 
@@ -218,16 +224,32 @@ internal sealed class DesktopShell : IDisposable
 
         HideStartMenu();
         ClearEventSystemSelection();
+        _files.ClosePopup();
+        _files.CancelDrag();
         _root.SetActive(false);
         S1GameInput.IsTyping = false;
     }
 
+    internal bool TryHandleEscape()
+    {
+        if (_files.TryDismissTransient()) return true;
+        if (_startMenu != null && _startMenu.activeSelf) { HideStartMenu(); return true; }
+        return false;
+    }
+
     internal void Tick()
     {
-        if (_disposed || !_root.activeSelf)
+        if (_disposed)
+            return;
+        TickPower();
+        if (!_root.activeSelf || _powerState != ComputerPowerState.Running)
             return;
 
         _windows.Tick();
+        _files.Tick();
+        if (!_windows.HasFocusedWindow)
+            _files.HandleKeyboard(_selectedDesktopNode, VirtualFileSystem.DesktopId,
+                () => { if (_selectedDesktopNode != null) OpenNode(_selectedDesktopNode); }, RefreshAppSurfaces);
         UpdateClock();
     }
 
@@ -251,6 +273,7 @@ internal sealed class DesktopShell : IDisposable
         _surfaceListeners.Dispose();
         _listeners.Dispose();
         _windows.Dispose();
+        _files.Dispose();
         _wallpaper.Dispose();
         if (_root != null)
             UnityEngine.Object.Destroy(_root);
@@ -327,6 +350,9 @@ internal sealed class DesktopShell : IDisposable
                 startMenu.transform.SetAsLastSibling();
                 UiFactory.SetLayerRecursively(desktopIconsRoot, Constants.UiLayer);
                 UiFactory.SetLayerRecursively(startMenu, Constants.UiLayer);
+                _files.BringToFront();
+                if (_powerScreen != null && _powerScreen.activeSelf)
+                    _powerScreen.transform.SetAsLastSibling();
             }
             while (_refreshPending && !_disposed);
         }
@@ -338,6 +364,7 @@ internal sealed class DesktopShell : IDisposable
 
     private void OpenApp(string appId)
     {
+        if (_powerState != ComputerPowerState.Running) return;
         HideStartMenu();
         if (!DesktopAppRegistry.TryGet(appId, out DesktopAppDescriptor descriptor))
             return;
@@ -351,6 +378,7 @@ internal sealed class DesktopShell : IDisposable
         try
         {
             _windows.Open(descriptor);
+            DesktopKernel.Publish(DesktopKernel.AppOpenedEvent, appId);
         }
         catch (Exception exception)
         {
@@ -361,6 +389,7 @@ internal sealed class DesktopShell : IDisposable
 
     private void OpenNode(string nodeId)
     {
+        if (_powerState != ComputerPowerState.Running) return;
         if (!VirtualFileSystemService.TryGetNode(nodeId, out VirtualFileSystemNode node))
             return;
         if (node.Kind == VirtualFileSystemNodeKind.Directory)
@@ -385,6 +414,7 @@ internal sealed class DesktopShell : IDisposable
 
     private void OpenFolder(string directoryId)
     {
+        if (_powerState != ComputerPowerState.Running) return;
         OpenApp(Constants.FilesAppId);
         _windows.OpenDirectory(Constants.FilesAppId, directoryId);
     }
@@ -402,7 +432,7 @@ internal sealed class DesktopShell : IDisposable
         }
 
         float listHeight = Mathf.Min(288f, Mathf.Max(36f, programCount * 36f));
-        float menuHeight = 140f + listHeight;
+        float menuHeight = 176f + listHeight;
         GameObject menu = UiFactory.CreatePanel(
             _root.transform,
             "StartMenu",
@@ -489,18 +519,14 @@ internal sealed class DesktopShell : IDisposable
             Button settingsEntry = CreateStartEntry(
                 menu.transform,
                 "Settings",
-                68f,
+                104f,
                 () => OpenApp(Constants.SettingsAppId),
                 reserveIconSpace: true);
             AddStartEntryIcon(settingsEntry.transform, settings);
         }
 
-        CreateStartEntry(
-            menu.transform,
-            "Power off",
-            28f,
-            _onPowerRequested,
-            UiFactory.Danger);
+        CreateStartEntry(menu.transform, "Restart", 66f, RestartComputer);
+        CreateStartEntry(menu.transform, "Shut down", 28f, ShutdownComputer, UiFactory.Danger);
         return menu;
     }
 
@@ -597,17 +623,26 @@ internal sealed class DesktopShell : IDisposable
         iconRect.anchorMax = new Vector2(0f, 1f);
         iconRect.pivot = new Vector2(0.5f, 1f);
         iconRect.sizeDelta = new Vector2(layout.CellWidth - 8f, layout.CellHeight - 4f);
-        iconRect.anchoredPosition = position;
+        iconRect.anchoredPosition = PreferencesStore.GetIconPosition(node.Id, position);
+        Vector2 savedPosition = iconRect.anchoredPosition;
+        Rect desktopArea = parent.GetComponent<RectTransform>().rect;
+        savedPosition.x = Mathf.Clamp(savedPosition.x, iconRect.rect.width / 2f, desktopArea.width - iconRect.rect.width / 2f);
+        savedPosition.y = Mathf.Clamp(savedPosition.y, -desktopArea.height + iconRect.rect.height, 0f);
+        iconRect.anchoredPosition = savedPosition;
 
         Image targetImage = iconObject.GetComponent<Image>();
+        // ColorTint multiplies the image color; a transparent base hides every state.
+        targetImage.color = Color.white;
         var button = iconObject.AddComponent<Button>();
         button.targetGraphic = targetImage;
+        button.transition = Selectable.Transition.ColorTint;
         ColorBlock colorBlock = button.colors;
         colorBlock.normalColor = Color.clear;
         colorBlock.highlightedColor = new Color(0.31f, 0.55f, 0.95f, 0.5f);
         colorBlock.pressedColor = new Color(0.17f, 0.37f, 0.78f, 0.72f);
-        colorBlock.selectedColor = Color.clear;
+        colorBlock.selectedColor = new Color(0.31f, 0.55f, 0.95f, 0.3f);
         colorBlock.disabledColor = Color.clear;
+        colorBlock.fadeDuration = 0.12f;
         button.colors = colorBlock;
 
         GameObject iconFrame = UiFactory.CreatePanel(
@@ -631,6 +666,7 @@ internal sealed class DesktopShell : IDisposable
 
         Image iconBackground = iconFrame.GetComponent<Image>();
         iconBackground.color = Color.clear;
+        iconBackground.raycastTarget = false;
         iconBackground.sprite = null;
         GameObject imageObject = new("Icon");
         imageObject.transform.SetParent(iconFrame.transform, false);
@@ -666,7 +702,34 @@ internal sealed class DesktopShell : IDisposable
         caption.overflowMode = TMPro.TextOverflowModes.Ellipsis;
 #endif
 
-        _surfaceListeners.Add(action, button.onClick);
+        _files.BindItem(iconObject, node.Id, _surfaceListeners, () => SelectDesktopNode(node.Id), action,
+            delta =>
+            {
+                Vector2 desired = iconRect.anchoredPosition + delta;
+                Rect parentRect = parent.GetComponent<RectTransform>().rect;
+                desired.x = Mathf.Clamp(desired.x, iconRect.rect.width / 2f, parentRect.width - iconRect.rect.width / 2f);
+                desired.y = Mathf.Clamp(desired.y, -parentRect.height + iconRect.rect.height, 0f);
+                iconRect.anchoredPosition = desired;
+                PreferencesStore.SetIconPosition(node.Id, desired);
+            });
+    }
+
+    private void SelectDesktopNode(string? id)
+    {
+        HideStartMenu();
+        _windows.ClearFocus();
+        _selectedDesktopNode = id;
+        if (_desktopIconsRoot == null) return;
+        for (int i = 0; i < _desktopIconsRoot.transform.childCount; i++)
+        {
+            Transform item = _desktopIconsRoot.transform.GetChild(i);
+            Button button = item.GetComponent<Button>();
+            ColorBlock colors = button.colors;
+            colors.normalColor = item.name == "DesktopIcon_" + id
+                ? new Color(0.31f, 0.55f, 0.95f, 0.3f) : Color.clear;
+            colors.selectedColor = colors.normalColor;
+            button.colors = colors;
+        }
     }
 
     private void ToggleStartMenu()
@@ -765,10 +828,14 @@ internal sealed class DesktopShell : IDisposable
         string clock = _gameClock.TryGetFormattedTime(out string formattedTime)
             ? formattedTime
             : string.Empty;
+        if (DesktopKernel.TryCall(DesktopKernel.ClockFormatterService, clock, out string customClock) &&
+            customClock.Length > 0 && customClock.Length <= 12 && customClock.IndexOfAny(new[] { '\r', '\n', '\t' }) < 0)
+            clock = customClock;
         if (string.Equals(clock, _lastClock, StringComparison.Ordinal))
             return;
 
         _lastClock = clock;
+        _clock.richText = false;
         _clock.text = clock;
     }
 

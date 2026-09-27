@@ -1,9 +1,12 @@
 using MelonLoader;
+using UsableComputer.API;
+using UsableComputer.Bridge;
 using S1API.Building;
 using S1API.Lifecycle;
 using UsableComputer.Content;
 using UsableComputer.FileSystem;
 using UsableComputer.Runtime;
+using UsableComputer.Reports;
 using UsableComputer.Scripting;
 using UsableComputer.UI;
 using UnityEngine;
@@ -27,10 +30,23 @@ public sealed class Core : MelonMod
         PreferencesStore.Initialize();
         VirtualFileSystemService.Initialize();
         BuiltInDesktopApps.RegisterAll();
+        S1ApiDesktopBridge.Start();
         LuaAppManager.Initialize();
+        DesktopKernel.Boot();
+        GameLifecycle.OnLoadComplete += DesktopKernel.SaveLoaded;
+        GameLifecycle.OnLoadComplete += S1ApiDesktopBridge.ResumeForSave;
+        GameLifecycle.OnPreSceneChange += DesktopKernel.SaveLeaving;
         GameLifecycle.OnPreLoad += ComputerContentRegistrar.Register;
         GameLifecycle.OnPreLoad += VirtualFileSystemService.PrepareForLoad;
+        GameLifecycle.OnPreLoad += BankReportsService.PrepareForLoad;
+        GameLifecycle.OnPreLoad += LuaStorageService.Prepare;
+        GameLifecycle.OnLoadComplete += LuaStorageService.Start;
+        GameLifecycle.OnPreSceneChange += LuaStorageService.Stop;
+        GameLifecycle.OnLoadComplete += BankReportsService.Start;
+        GameLifecycle.OnSaveStart += BankReportsService.Flush;
+        GameLifecycle.OnPreSceneChange += BankReportsService.Stop;
         GameLifecycle.OnLoadComplete += ComputerContentRegistrar.AddToShops;
+        GameLifecycle.OnPreSceneChange += S1ApiDesktopBridge.ClearForSceneChange;
         GameLifecycle.OnPreSceneChange += UsableComputerRuntime.DisposeAll;
         BuildEvents.OnBuildableItemInitialized += UsableComputerRuntime.Attach;
         _subscribed = true;
@@ -41,6 +57,9 @@ public sealed class Core : MelonMod
     public override void OnUpdate()
     {
         UsableComputerRuntime.Update();
+        S1ApiDesktopBridge.Update();
+        BankReportsService.Update();
+        DesktopKernel.Tick(Time.unscaledDeltaTime);
 
         if (ComputerContentRegistrar.IsRegistered &&
             !ComputerContentRegistrar.ShopsAdded &&
@@ -71,16 +90,31 @@ public sealed class Core : MelonMod
     {
         if (_subscribed)
         {
+            GameLifecycle.OnLoadComplete -= DesktopKernel.SaveLoaded;
+            GameLifecycle.OnLoadComplete -= S1ApiDesktopBridge.ResumeForSave;
+            GameLifecycle.OnPreSceneChange -= DesktopKernel.SaveLeaving;
             GameLifecycle.OnPreLoad -= ComputerContentRegistrar.Register;
             GameLifecycle.OnPreLoad -= VirtualFileSystemService.PrepareForLoad;
+            GameLifecycle.OnPreLoad -= BankReportsService.PrepareForLoad;
+            GameLifecycle.OnPreLoad -= LuaStorageService.Prepare;
+            GameLifecycle.OnLoadComplete -= LuaStorageService.Start;
+            GameLifecycle.OnPreSceneChange -= LuaStorageService.Stop;
+            GameLifecycle.OnLoadComplete -= BankReportsService.Start;
+            GameLifecycle.OnSaveStart -= BankReportsService.Flush;
+            GameLifecycle.OnPreSceneChange -= BankReportsService.Stop;
             GameLifecycle.OnLoadComplete -= ComputerContentRegistrar.AddToShops;
+            GameLifecycle.OnPreSceneChange -= S1ApiDesktopBridge.ClearForSceneChange;
             GameLifecycle.OnPreSceneChange -= UsableComputerRuntime.DisposeAll;
             BuildEvents.OnBuildableItemInitialized -= UsableComputerRuntime.Attach;
             _subscribed = false;
         }
 
+        S1ApiDesktopBridge.Stop();
         UsableComputerRuntime.DisposeAll();
+        DesktopKernel.Shutdown();
+        BankReportsService.Stop();
         LuaAppManager.Shutdown();
+        LuaStorageService.Stop();
         BuiltInDesktopApps.UnregisterAll();
         VirtualFileSystemService.Shutdown();
     }

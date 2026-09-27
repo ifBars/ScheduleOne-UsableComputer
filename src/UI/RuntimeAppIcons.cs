@@ -8,6 +8,7 @@ namespace UsableComputer.UI;
 internal enum BuiltInIcon
 {
     Notes,
+    Reports,
     Folder,
     Calculator,
     About,
@@ -85,6 +86,9 @@ internal static class RuntimeAppIcons
 
         switch (icon)
         {
+            case BuiltInIcon.Reports:
+                DrawReports(pixels);
+                break;
             case BuiltInIcon.Notes:
                 DrawNotes(pixels);
                 break;
@@ -131,6 +135,17 @@ internal static class RuntimeAppIcons
         DrawRect(pixels, 18, 45, 21, 3, new Color32(77, 126, 190, 255));
         for (int x = 17; x <= 49; x += 8)
             DrawRect(pixels, x, 54, 4, 6, new Color32(70, 70, 74, 255));
+    }
+
+    private static void DrawReports(Color32[] pixels)
+    {
+        DrawRect(pixels, 10, 5, 44, 54, new Color32(48, 104, 59, 255));
+        DrawRect(pixels, 16, 10, 33, 44, new Color32(245, 245, 220, 255));
+        DrawRect(pixels, 20, 43, 25, 3, new Color32(70, 99, 91, 255));
+        DrawRect(pixels, 20, 34, 25, 2, new Color32(150, 168, 150, 255));
+        DrawRect(pixels, 20, 16, 6, 10, new Color32(75, 143, 85, 255));
+        DrawRect(pixels, 29, 16, 6, 16, new Color32(63, 122, 179, 255));
+        DrawRect(pixels, 38, 16, 6, 22, new Color32(75, 143, 85, 255));
     }
 
     private static void DrawFolder(Color32[] pixels)

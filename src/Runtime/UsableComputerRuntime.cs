@@ -12,7 +12,9 @@ internal static class UsableComputerRuntime
 
     internal static void Attach(BuildEventArgs args)
     {
-        if (args == null || !string.Equals(args.ItemId, Constants.ItemId, StringComparison.Ordinal))
+        if (args == null ||
+            (!string.Equals(args.ItemId, Constants.ItemId, StringComparison.Ordinal) &&
+             !string.Equals(args.ItemId, Constants.LaptopItemId, StringComparison.Ordinal)))
             return;
 
         GameObject? builtObject = args.GameObject;

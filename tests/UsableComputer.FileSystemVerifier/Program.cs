@@ -16,6 +16,8 @@ var tests = new (string Name, Action Test)[]
     ("invalid snapshots are rejected", TestInvalidSnapshot),
     ("persisted names and shortcut targets remain canonical", TestCanonicalSnapshotValues),
     ("shortcut reconciliation tolerates a full filesystem", TestShortcutCapacity),
+    ("copy preserves subtree content with new identities", TestCopy),
+    ("copy rejects cycles and storage overflow atomically", TestCopyFailure),
 };
 
 foreach ((string name, Action test) in tests)
@@ -25,6 +27,32 @@ foreach ((string name, Action test) in tests)
 }
 
 TextFileTests.Run();
+
+static void TestCopy()
+{
+    var fs = new VirtualFileSystem();
+    var folder = fs.CreateDirectory("desktop", "Work");
+    var nested = fs.CreateDirectory(folder.Id, "Nested");
+    var file = fs.CreateTextFile(nested.Id, "Note.txt", "hello");
+    var copy = fs.Copy(folder.Id, "desktop");
+    Assert(copy.Id != folder.Id && copy.Name != folder.Name, "copy should allocate a unique identity and name");
+    var copiedFile = fs.ResolvePath(fs.GetPath(copy.Id) + "/Nested/Note.txt");
+    Assert(copiedFile.Id != file.Id && fs.ReadText(copiedFile.Id) == "hello", "nested content should be copied");
+    var restored = new VirtualFileSystem(fs.CreateSnapshot());
+    Assert(restored.ReadText(copiedFile.Id) == "hello", "copy should survive persistence");
+}
+
+static void TestCopyFailure()
+{
+    var fs = new VirtualFileSystem();
+    var folder = fs.CreateDirectory("desktop", "Work");
+    var nested = fs.CreateDirectory(folder.Id, "Nested");
+    AssertThrows<InvalidOperationException>(() => fs.Copy(folder.Id, nested.Id), "copy cycle should fail");
+    for (int i = 0; i < 9; i++) fs.CreateTextFile(folder.Id, i + ".txt", new string('x', 65536));
+    int count = fs.CreateSnapshot().Nodes.Count;
+    AssertThrows<InvalidOperationException>(() => fs.Copy(folder.Id, "desktop"), "oversize copy should fail");
+    Assert(fs.CreateSnapshot().Nodes.Count == count, "failed copy must not add partial nodes");
+}
 
 static void TestFreshRoots()
 {

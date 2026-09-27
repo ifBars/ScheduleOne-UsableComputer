@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <Import Project="../../local.build.props" Condition="Exists('../../local.build.props')" />
+  <PropertyGroup>
+    <TargetFramework Condition="'$(Configuration)' == 'Il2cpp'">net6.0</TargetFramework>
+    <TargetFramework Condition="'$(Configuration)' != 'Il2cpp'">netstandard2.1</TargetFramework>
+    <Configurations>Mono;Il2cpp</Configurations>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>UsableComputer_DriverSample_$(Configuration)</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../UsableComputer.csproj" />
+    <Reference Include="MelonLoader" HintPath="$(MonoMelonLoaderPath)/MelonLoader.dll" Condition="'$(Configuration)' == 'Mono'" Private="false" />
+    <Reference Include="MelonLoader" HintPath="$(Il2CppMelonLoaderPath)/MelonLoader.dll" Condition="'$(Configuration)' == 'Il2cpp'" Private="false" />
+  </ItemGroup>
+</Project>
