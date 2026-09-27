@@ -10,6 +10,7 @@
   <ItemGroup>
     <Compile Include="Program.cs" />
     <Compile Include="..\..\src\Kernel\DesktopAppRegistryStore.cs" Link="DesktopAppRegistryStore.cs" />
-    <Compile Include="..\..\src\Native\DesktopViewModels.cs" Link="DesktopViewModels.cs" />
+    <Compile Include="..\..\src\Native\JournalViewModels.cs" Link="JournalViewModels.cs" />
+    <Compile Include="..\..\src\Native\ProductViewModel.cs" Link="ProductViewModel.cs" />
   </ItemGroup>
 </Project>

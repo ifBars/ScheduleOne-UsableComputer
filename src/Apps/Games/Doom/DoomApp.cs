@@ -6,7 +6,6 @@ using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 using UsableComputer.API;
-using UsableComputer.Shell;
 using UsableComputer.UI;
 using UiButton = UnityEngine.UI.Button;
 
