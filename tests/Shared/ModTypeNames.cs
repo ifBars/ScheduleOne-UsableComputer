@@ -12,7 +12,7 @@ internal static class ModTypeNames
     internal const string DesktopAppRegistry = "UsableComputer.API.DesktopAppRegistry";
     internal const string DesktopShell = "UsableComputer.Shell.DesktopShell";
     internal const string VirtualFileSystemService = "UsableComputer.FileSystem.VirtualFileSystemService";
-    internal const string UsableComputerController = "UsableComputer.Hardware.UsableComputerController";
+    internal const string ComputerController = "UsableComputer.Hardware.ComputerController";
     internal const string NativeComputerModelFactory = "UsableComputer.Hardware.NativeComputerModelFactory";
     internal const string ComputerContentRegistrar = "UsableComputer.Hardware.ComputerContentRegistrar";
     internal const string BankReportsService = "UsableComputer.Apps.Reports.BankReportsService";

@@ -958,7 +958,7 @@ public sealed partial class Core : MelonMod
             (_computerModel.transform.rotation * Vector3.Scale(cameraAnchor.localPosition, _computerModel.transform.localScale));
         _computerModel.SetActive(true);
         _computerModel.name = "FurnitureVisual";
-        Type controllerType = assembly.GetType(ModTypeNames.UsableComputerController, true)!;
+        Type controllerType = assembly.GetType(ModTypeNames.ComputerController, true)!;
         _controller = (IDisposable)Activator.CreateInstance(controllerType, BindingFlags.Instance | BindingFlags.NonPublic,
             null, new object[] { _computerModel }, null)!;
         controllerType.GetMethod("TryInitialize", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_controller, null);

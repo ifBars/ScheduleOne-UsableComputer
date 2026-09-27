@@ -5,10 +5,10 @@ using UnityEngine;
 
 namespace UsableComputer.Hardware;
 
-internal static class UsableComputerRuntime
+internal static class PlacedComputers
 {
-    private static readonly Dictionary<int, UsableComputerController> Controllers = new();
-    private static UsableComputerController? _activeController;
+    private static readonly Dictionary<int, ComputerController> Controllers = new();
+    private static ComputerController? _activeController;
 
     internal static void Attach(BuildEventArgs args)
     {
@@ -25,7 +25,7 @@ internal static class UsableComputerRuntime
         if (Controllers.ContainsKey(instanceId))
             return;
 
-        var controller = new UsableComputerController(builtObject);
+        var controller = new ComputerController(builtObject);
         Controllers.Add(instanceId, controller);
         controller.TryInitialize();
     }
@@ -35,8 +35,8 @@ internal static class UsableComputerRuntime
         if (Controllers.Count == 0)
             return;
 
-        var snapshot = new List<KeyValuePair<int, UsableComputerController>>(Controllers);
-        foreach (KeyValuePair<int, UsableComputerController> entry in snapshot)
+        var snapshot = new List<KeyValuePair<int, ComputerController>>(Controllers);
+        foreach (KeyValuePair<int, ComputerController> entry in snapshot)
         {
             entry.Value.Tick(Time.unscaledTime);
             if (entry.Value.IsDisposed)
@@ -44,7 +44,7 @@ internal static class UsableComputerRuntime
         }
     }
 
-    internal static void CloseOther(UsableComputerController controller)
+    internal static void CloseOther(ComputerController controller)
     {
         if (_activeController != null && _activeController != controller)
             _activeController.Close();
@@ -52,7 +52,7 @@ internal static class UsableComputerRuntime
         _activeController = controller;
     }
 
-    internal static void NotifyClosed(UsableComputerController controller)
+    internal static void NotifyClosed(ComputerController controller)
     {
         if (_activeController == controller)
             _activeController = null;
@@ -60,8 +60,8 @@ internal static class UsableComputerRuntime
 
     internal static void DisposeAll()
     {
-        var snapshot = new List<UsableComputerController>(Controllers.Values);
-        foreach (UsableComputerController controller in snapshot)
+        var snapshot = new List<ComputerController>(Controllers.Values);
+        foreach (ComputerController controller in snapshot)
             controller.Dispose();
 
         Controllers.Clear();

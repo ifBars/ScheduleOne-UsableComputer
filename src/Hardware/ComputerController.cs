@@ -31,7 +31,7 @@ using S1StateProperties = ScheduleOne.State.StateProperties;
 
 namespace UsableComputer.Hardware;
 
-internal sealed class UsableComputerController : IDisposable
+internal sealed class ComputerController : IDisposable
 {
     private readonly GameObject _builtObject;
     private readonly string _interactionToken;
@@ -58,7 +58,7 @@ internal sealed class UsableComputerController : IDisposable
     private float _nextInitializationAttempt;
     private float _viewAspect;
 
-    internal UsableComputerController(GameObject builtObject)
+    internal ComputerController(GameObject builtObject)
     {
         _builtObject = builtObject;
         _interactionToken = Constants.InteractionTokenPrefix + builtObject.GetInstanceID();
@@ -167,7 +167,7 @@ internal sealed class UsableComputerController : IDisposable
         if (playerCamera == null || playerCamera.Camera == null)
             return;
 
-        UsableComputerRuntime.CloseOther(this);
+        PlacedComputers.CloseOther(this);
         _isOpen = true;
         _playerCamera = playerCamera;
         S1GameInput.IsTyping = false;
@@ -308,7 +308,7 @@ internal sealed class UsableComputerController : IDisposable
         _cameraOverridden = false;
         _playerCamera = null;
         _interactable?.SetInteractableState(S1Interactable.EInteractableState.Default);
-        UsableComputerRuntime.NotifyClosed(this);
+        PlacedComputers.NotifyClosed(this);
     }
 
     public void Dispose()

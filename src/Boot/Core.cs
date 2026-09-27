@@ -48,8 +48,8 @@ public sealed class Core : MelonMod
         GameLifecycle.OnPreSceneChange += BankReportsService.Stop;
         GameLifecycle.OnLoadComplete += ComputerContentRegistrar.AddToShops;
         GameLifecycle.OnPreSceneChange += S1ApiDesktopBridge.ClearForSceneChange;
-        GameLifecycle.OnPreSceneChange += UsableComputerRuntime.DisposeAll;
-        BuildEvents.OnBuildableItemInitialized += UsableComputerRuntime.Attach;
+        GameLifecycle.OnPreSceneChange += PlacedComputers.DisposeAll;
+        BuildEvents.OnBuildableItemInitialized += PlacedComputers.Attach;
         _subscribed = true;
         MelonLogger.Msg(
             $"[{Constants.ModName}] {Constants.ModVersion} initialized for {Constants.RuntimeName}.");
@@ -57,7 +57,7 @@ public sealed class Core : MelonMod
 
     public override void OnUpdate()
     {
-        UsableComputerRuntime.Update();
+        PlacedComputers.Update();
         S1ApiDesktopBridge.Update();
         BankReportsService.Update();
         DesktopKernel.Tick(Time.unscaledDeltaTime);
@@ -105,13 +105,13 @@ public sealed class Core : MelonMod
             GameLifecycle.OnPreSceneChange -= BankReportsService.Stop;
             GameLifecycle.OnLoadComplete -= ComputerContentRegistrar.AddToShops;
             GameLifecycle.OnPreSceneChange -= S1ApiDesktopBridge.ClearForSceneChange;
-            GameLifecycle.OnPreSceneChange -= UsableComputerRuntime.DisposeAll;
-            BuildEvents.OnBuildableItemInitialized -= UsableComputerRuntime.Attach;
+            GameLifecycle.OnPreSceneChange -= PlacedComputers.DisposeAll;
+            BuildEvents.OnBuildableItemInitialized -= PlacedComputers.Attach;
             _subscribed = false;
         }
 
         S1ApiDesktopBridge.Stop();
-        UsableComputerRuntime.DisposeAll();
+        PlacedComputers.DisposeAll();
         DesktopKernel.Shutdown();
         BankReportsService.Stop();
         LuaAppManager.Shutdown();
