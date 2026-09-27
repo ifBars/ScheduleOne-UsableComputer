@@ -6,7 +6,7 @@ using S1TimeManager = Il2CppScheduleOne.GameTime.TimeManager;
 using S1TimeManager = ScheduleOne.GameTime.TimeManager;
 #endif
 
-namespace UsableComputer.Native;
+namespace UsableComputer.Shell;
 
 internal sealed class NativeGameClock
 {
