@@ -35,6 +35,7 @@
 
   <ItemGroup>
     <Compile Include="..\..\src\Hardware\DisplayProfile.cs" Link="DisplayProfile.cs" />
+    <Compile Include="..\..\src\Apps\Games\NestedGame\NestedGameProtocol.cs" Link="NestedGameProtocol.cs" />
   </ItemGroup>
 
   <ItemGroup Condition="'$(Configuration)' == 'Il2cpp'">
