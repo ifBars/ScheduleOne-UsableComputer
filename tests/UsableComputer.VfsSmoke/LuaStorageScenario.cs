@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Tests.Shared;
 
 #if IL2CPP
 using LuaErrorText = Il2CppTMPro.TextMeshProUGUI;
@@ -16,11 +17,11 @@ public sealed partial class Core
     private IEnumerator RunLuaStorageScenario()
     {
         const string id = "smoke-storage";
-        Type manager = GetUsableComputerAssembly().GetType("UsableComputer.Scripting.LuaAppManager", true)!;
+        Type manager = GetUsableComputerAssembly().GetType(ModTypeNames.LuaAppManager, true)!;
         object definition;
         try
         {
-            Type preferences = GetUsableComputerAssembly().GetType("UsableComputer.PreferencesStore", true)!;
+            Type preferences = GetUsableComputerAssembly().GetType(ModTypeNames.PreferencesStore, true)!;
             MethodInfo setTheme = preferences.GetMethod("SetTheme", BindingFlags.Static | BindingFlags.NonPublic)!;
             setTheme.Invoke(null, new[] { Enum.Parse(setTheme.GetParameters()[0].ParameterType, _phase == "seed" ? "Light" : "Dark") });
             string source = "return {api_version=1,id='" + id + "',title='Storage Smoke',render=function() " +
@@ -33,7 +34,7 @@ public sealed partial class Core
             Require((bool)manager.GetMethod("TryCompile", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, args)!, "Storage compile failed: " + args[3]);
             definition = args[2];
             // Execute through the same bounded render callback used by the UI.
-            Type service = GetUsableComputerAssembly().GetType("UsableComputer.Scripting.LuaStorageService", true)!;
+            Type service = GetUsableComputerAssembly().GetType(ModTypeNames.LuaStorageService, true)!;
             string? value = (string?)service.GetMethod("Get", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, new object[] { id, "value" });
             Require(value == (_phase == "seed" ? null : "remembered"), "Storage did not round-trip through the game save.");
             Require(service.GetMethod("Get", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, new object[] { "other-app", "value" }) == null, "Storage leaked between app IDs.");

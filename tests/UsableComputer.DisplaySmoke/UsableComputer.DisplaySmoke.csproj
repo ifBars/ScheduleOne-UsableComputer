@@ -22,4 +22,8 @@
     <Reference Include="UnityEngine.UI" HintPath="$(MonoAssembliesPath)\UnityEngine.UI.dll" Private="false" />
     <Reference Include="UnityEngine.UIModule" HintPath="$(MonoAssembliesPath)\UnityEngine.UIModule.dll" Private="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\ModTypeNames.cs" Link="Shared\ModTypeNames.cs" />
+  </ItemGroup>
 </Project>

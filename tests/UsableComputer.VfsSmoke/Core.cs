@@ -3,6 +3,7 @@ using System.Reflection;
 using MelonLoader;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UsableComputer.Tests.Shared;
 
 #if IL2CPP
 using S1Input = Il2CppTMPro.TMP_InputField;
@@ -454,7 +455,7 @@ public sealed partial class Core : MelonMod
 
     private IEnumerator RunIconLayoutScenario()
     {
-        Type preferences = GetUsableComputerAssembly().GetType("UsableComputer.PreferencesStore", true)!;
+        Type preferences = GetUsableComputerAssembly().GetType(ModTypeNames.PreferencesStore, true)!;
         if (_phase == "reload")
         {
             try
@@ -771,7 +772,7 @@ public sealed partial class Core : MelonMod
             yield break;
         }
 
-        Type preferences = GetUsableComputerAssembly().GetType("UsableComputer.PreferencesStore", true)!;
+        Type preferences = GetUsableComputerAssembly().GetType(ModTypeNames.PreferencesStore, true)!;
         MethodInfo setTheme = preferences.GetMethod("SetTheme", BindingFlags.Static | BindingFlags.NonPublic)!;
         foreach (string theme in new[] { "Dark", "Light" })
         {
@@ -787,7 +788,7 @@ public sealed partial class Core : MelonMod
 
     private IEnumerator RunReportsScenario()
     {
-        Type service = GetUsableComputerAssembly().GetType("UsableComputer.Reports.BankReportsService", true)!;
+        Type service = GetUsableComputerAssembly().GetType(ModTypeNames.BankReportsService, true)!;
         try
         {
             Invoke(service, "Flush");
@@ -943,7 +944,7 @@ public sealed partial class Core : MelonMod
     private void OpenFolderUi(string folderId)
     {
         Assembly assembly = GetUsableComputerAssembly();
-        Type shellType = assembly.GetType("UsableComputer.UI.DesktopShell", throwOnError: true)!;
+        Type shellType = assembly.GetType(ModTypeNames.DesktopShell, throwOnError: true)!;
         Camera camera = Camera.main!;
         _computerModel = CreateComputerModel(assembly);
         Transform cameraAnchor = FindDescendant(_computerModel.transform, "UsableComputer_CameraAnchor")
@@ -957,7 +958,7 @@ public sealed partial class Core : MelonMod
             (_computerModel.transform.rotation * Vector3.Scale(cameraAnchor.localPosition, _computerModel.transform.localScale));
         _computerModel.SetActive(true);
         _computerModel.name = "FurnitureVisual";
-        Type controllerType = assembly.GetType("UsableComputer.Runtime.UsableComputerController", true)!;
+        Type controllerType = assembly.GetType(ModTypeNames.UsableComputerController, true)!;
         _controller = (IDisposable)Activator.CreateInstance(controllerType, BindingFlags.Instance | BindingFlags.NonPublic,
             null, new object[] { _computerModel }, null)!;
         controllerType.GetMethod("TryInitialize", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_controller, null);
@@ -995,7 +996,7 @@ public sealed partial class Core : MelonMod
 #endif
         GameObject donorObject = donor.BuiltItem.gameObject;
 
-        Type factoryType = assembly.GetType("UsableComputer.Content.NativeComputerModelFactory", throwOnError: true)!;
+        Type factoryType = assembly.GetType(ModTypeNames.NativeComputerModelFactory, throwOnError: true)!;
         if (_laptop)
         {
             object laptopItem = S1Registry.GetItem("usable_laptop")
@@ -1009,7 +1010,7 @@ public sealed partial class Core : MelonMod
 #endif
             Require(laptopDefinition.BuiltItem != null && laptopDefinition.StoredItem != null,
                 "The laptop is missing its placed or inventory prefab.");
-            Type registrar = assembly.GetType("UsableComputer.Content.ComputerContentRegistrar", true)!;
+            Type registrar = assembly.GetType(ModTypeNames.ComputerContentRegistrar, true)!;
             GameObject source = (GameObject)(registrar.GetMethod("FindNativeLaptop", BindingFlags.Static | BindingFlags.NonPublic)!
                 .Invoke(null, null) ?? throw new InvalidOperationException("The native laptop was not found."));
             MethodInfo createLaptop = factoryType.GetMethod("CreateLaptop", BindingFlags.Static | BindingFlags.NonPublic)!;
@@ -1039,7 +1040,7 @@ public sealed partial class Core : MelonMod
     private static object GetServiceType()
     {
         return GetUsableComputerAssembly().GetType(
-            "UsableComputer.FileSystem.VirtualFileSystemService",
+            ModTypeNames.VirtualFileSystemService,
             throwOnError: true)!;
     }
 

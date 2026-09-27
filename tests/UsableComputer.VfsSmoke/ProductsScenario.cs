@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Tests.Shared;
 
 #if IL2CPP
 using ProductInput = Il2CppTMPro.TMP_InputField;
@@ -21,7 +22,7 @@ public sealed partial class Core
         try
         {
             CloseAllWindows();
-            Type preferences = GetUsableComputerAssembly().GetType("UsableComputer.PreferencesStore", true)!;
+            Type preferences = GetUsableComputerAssembly().GetType(ModTypeNames.PreferencesStore, true)!;
             MethodInfo setTheme = preferences.GetMethod("SetTheme", BindingFlags.Static | BindingFlags.NonPublic)!;
             setTheme.Invoke(null, new[] { Enum.Parse(setTheme.GetParameters()[0].ParameterType, _phase == "seed" ? "Light" : "Dark") });
             _desktop!.GetType().GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_desktop, new object[] { "product-manager" });

@@ -4,6 +4,7 @@ using S1API.ExternalHosting;
 using UsableComputer.API;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Tests.Shared;
 
 #if IL2CPP
 using NativePhone = Il2CppScheduleOne.UI.Phone.Phone;
@@ -154,7 +155,7 @@ public sealed partial class Core
             ExternalAppRegistration registration = ExternalAppCatalog.GetAll()
                 .Single(entry => entry.Id == faultyId);
             Type adapterType = typeof(DesktopAppRegistry).Assembly
-                .GetType("UsableComputer.Bridge.ExternalAppDesktopSession")!;
+                .GetType(ModTypeNames.ExternalAppDesktopSession)!;
             var adapter = (IDesktopAppSession)Activator.CreateInstance(adapterType,
                 BindingFlags.Instance | BindingFlags.NonPublic, null,
                 new object[] { registration, context }, null)!;
@@ -185,7 +186,7 @@ public sealed partial class Core
 
     private static void InvokeBridge(string method)
     {
-        Type bridge = typeof(DesktopAppRegistry).Assembly.GetType("UsableComputer.Bridge.S1ApiDesktopBridge")
+        Type bridge = typeof(DesktopAppRegistry).Assembly.GetType(ModTypeNames.S1ApiDesktopBridge)
             ?? throw new InvalidOperationException("S1API desktop bridge type is unavailable.");
         bridge.GetMethod(method, BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null);
     }

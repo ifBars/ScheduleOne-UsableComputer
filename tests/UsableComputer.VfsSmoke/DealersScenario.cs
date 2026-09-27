@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Tests.Shared;
 
 #if IL2CPP
 using S1Dealer = Il2CppScheduleOne.Economy.Dealer;
@@ -48,7 +49,7 @@ public sealed partial class Core
             phoneParent = S1DealerApp.Instance.transform.parent;
             phoneSelection = S1DealerApp.Instance.SelectedDealer;
             CloseAllWindows();
-            Type preferences = GetUsableComputerAssembly().GetType("UsableComputer.PreferencesStore", true)!;
+            Type preferences = GetUsableComputerAssembly().GetType(ModTypeNames.PreferencesStore, true)!;
             MethodInfo setTheme = preferences.GetMethod("SetTheme", BindingFlags.Static | BindingFlags.NonPublic)!;
             setTheme.Invoke(null, new[] { Enum.Parse(setTheme.GetParameters()[0].ParameterType, _phase == "seed" ? "Light" : "Dark") });
             _desktop!.GetType().GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_desktop, new object[] { "dealers" });

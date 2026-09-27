@@ -3,6 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using System.Reflection;
+using UsableComputer.Tests.Shared;
 
 namespace UsableComputer.DisplaySmoke;
 
@@ -79,7 +80,7 @@ internal static class DesktopInteractionScenario
             RectTransform iconRect = icon.GetComponent<RectTransform>();
             RectTransform iconParent = iconRect.parent.GetComponent<RectTransform>();
             Vector2 before = iconRect.anchoredPosition;
-            Type preferences = AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.GetType("UsableComputer.PreferencesStore"))
+            Type preferences = AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.GetType(ModTypeNames.PreferencesStore))
                 .First(type => type != null)!;
             string id = icon.name.Substring("DesktopIcon_".Length);
             MethodInfo getPosition = preferences.GetMethod("GetIconPosition", BindingFlags.Static | BindingFlags.NonPublic)!;
@@ -109,7 +110,7 @@ internal static class DesktopInteractionScenario
 
     private static void VerifyExplorer(GameObject desktop, PointerEventData pointer)
     {
-        Type service = AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.GetType("UsableComputer.FileSystem.VirtualFileSystemService"))
+        Type service = AppDomain.CurrentDomain.GetAssemblies().Select(assembly => assembly.GetType(ModTypeNames.VirtualFileSystemService))
             .First(type => type != null)!;
         object Call(string method, params object[] args) => service.GetMethod(method, BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, args)!;
         string Id(object node) => (string)node.GetType().GetProperty("Id")!.GetValue(node)!;

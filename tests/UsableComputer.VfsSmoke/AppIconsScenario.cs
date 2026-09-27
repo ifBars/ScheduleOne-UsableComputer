@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Tests.Shared;
 
 namespace UsableComputer.VfsSmoke;
 
@@ -10,8 +11,8 @@ public sealed partial class Core
     private IEnumerator RunAppIconsScenario()
     {
         const string id = "smoke-custom-icon";
-        Type manager = GetUsableComputerAssembly().GetType("UsableComputer.Scripting.LuaAppManager", true)!;
-        Type registry = GetUsableComputerAssembly().GetType("UsableComputer.API.DesktopAppRegistry", true)!;
+        Type manager = GetUsableComputerAssembly().GetType(ModTypeNames.LuaAppManager, true)!;
+        Type registry = GetUsableComputerAssembly().GetType(ModTypeNames.DesktopAppRegistry, true)!;
         object? definition = null;
         Sprite? first = null;
         Texture2D? firstTexture = null;
@@ -41,7 +42,7 @@ public sealed partial class Core
         {
             Transform content = GameObject.Find("LuaContent").transform;
             Require(content.childCount > 0, "Lua app has no content after refresh.");
-            int uiLayer = (int)GetUsableComputerAssembly().GetType("UsableComputer.Constants", true)!
+            int uiLayer = (int)GetUsableComputerAssembly().GetType(ModTypeNames.Constants, true)!
                 .GetField("UiLayer", BindingFlags.Static | BindingFlags.NonPublic)!.GetRawConstantValue()!;
             for (int index = 0; index < content.childCount; index++)
                 Require(content.GetChild(index).gameObject.layer == uiLayer,

@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Tests.Shared;
 
 #if IL2CPP
 using NativeRunner = Il2CppScheduleOne.TV.RunnerGame;
@@ -34,7 +35,7 @@ public sealed partial class Core
         bool canSaveHighScore;
         try
         {
-            Type adapter = GetUsableComputerAssembly().GetType("UsableComputer.Native.EggRunNativeAdapter", true)!;
+            Type adapter = GetUsableComputerAssembly().GetType(ModTypeNames.EggRunNativeAdapter, true)!;
             source = (NativeRunner)adapter.GetMethod("FindSource", BindingFlags.Static | BindingFlags.NonPublic)!
                 .Invoke(null, null)! ?? throw new InvalidOperationException("Egg Run native source missing.");
             sourceCharacter = source.Character.anchoredPosition;

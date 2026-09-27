@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Tests.Shared;
 
 #if IL2CPP
 using NativeSnake = Il2CppScheduleOne.TV.Snake;
@@ -23,12 +24,12 @@ public sealed partial class Core
         Vector2 head;
         try
         {
-            Type adapter = GetUsableComputerAssembly().GetType("UsableComputer.Native.NoodleNativeAdapter", true)!;
+            Type adapter = GetUsableComputerAssembly().GetType(ModTypeNames.NoodleNativeAdapter, true)!;
             source = (NativeSnake)adapter.GetMethod("FindSource", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, null)!;
             Require(source != null, "Noodle source missing.");
             sourceHead = source!.HeadPosition;
             CloseAllWindows();
-            Type preferences = GetUsableComputerAssembly().GetType("UsableComputer.PreferencesStore", true)!;
+            Type preferences = GetUsableComputerAssembly().GetType(ModTypeNames.PreferencesStore, true)!;
             MethodInfo setTheme = preferences.GetMethod("SetTheme", BindingFlags.Static | BindingFlags.NonPublic)!;
             setTheme.Invoke(null, new[] { Enum.Parse(setTheme.GetParameters()[0].ParameterType, _phase == "seed" ? "Light" : "Dark") });
             _desktop!.GetType().GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_desktop, new object[] { "native-tv.noodle" });
