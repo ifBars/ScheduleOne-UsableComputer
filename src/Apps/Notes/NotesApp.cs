@@ -19,7 +19,7 @@ using S1Alignment = TMPro.TextAlignmentOptions;
 
 namespace UsableComputer.Apps.Notes;
 
-internal sealed class NotesApp : IDesktopAppSession
+internal sealed class NotesApp : IDesktopAppSession, IDesktopFileSession
 {
     private readonly DesktopAppContext _context;
     private readonly NotesDocument _document;
@@ -74,7 +74,7 @@ internal sealed class NotesApp : IDesktopAppSession
         ShowStatus();
     }
 
-    internal void OpenFile(string fileId) => Change(() => _document.Open(fileId));
+    public void OpenFile(string fileId) => Change(() => _document.Open(fileId));
 
     public void OnOpened() { }
     public void OnClosed() => _context.SetTyping(false);

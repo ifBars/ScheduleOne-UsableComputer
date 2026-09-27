@@ -12,3 +12,8 @@ internal interface IDesktopDirectorySession
 {
     void OpenDirectory(string directoryId);
 }
+
+internal interface IDesktopFileSession
+{
+    void OpenFile(string fileId);
+}

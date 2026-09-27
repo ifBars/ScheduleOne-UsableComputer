@@ -1,6 +1,5 @@
 using System;
 using UsableComputer.API;
-using UsableComputer.Apps.Notes;
 using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -144,8 +143,8 @@ internal sealed class DesktopWindow : IDisposable
 
     internal void OpenFile(string fileId)
     {
-        if (!_disposed && _session is NotesApp notes)
-            notes.OpenFile(fileId);
+        if (!_disposed && _session is IDesktopFileSession fileSession)
+            fileSession.OpenFile(fileId);
     }
 
     internal void SetVisible(bool visible)

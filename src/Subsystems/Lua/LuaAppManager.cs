@@ -9,7 +9,6 @@ using S1API.Entities;
 using S1API.Money;
 using S1API.Property;
 using UsableComputer.API;
-using UsableComputer.Apps.AppStudio;
 using UsableComputer.Native;
 
 namespace UsableComputer.Subsystems.Lua;
@@ -182,7 +181,6 @@ internal static class LuaAppManager
         }
         Definitions.Clear();
         _lastSource = null;
-        AppStudioApp.ClearDrafts();
     }
 
     private static void Register(LuaAppDefinition definition)

@@ -1,6 +1,7 @@
 using MelonLoader;
 using UsableComputer.API;
 using UsableComputer.Apps;
+using UsableComputer.Apps.AppStudio;
 using UsableComputer.Apps.Reports;
 using UsableComputer.FileSystem;
 using UsableComputer.Hardware;
@@ -114,6 +115,7 @@ public sealed class Core : MelonMod
         DesktopKernel.Shutdown();
         BankReportsService.Stop();
         LuaAppManager.Shutdown();
+        AppStudioApp.ClearDrafts();
         LuaStorageService.Stop();
         BuiltInDesktopApps.UnregisterAll();
         VirtualFileSystemService.Shutdown();
