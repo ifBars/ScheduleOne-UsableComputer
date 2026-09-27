@@ -10,6 +10,7 @@ using S1PlayerCamera = ScheduleOne.PlayerScripts.PlayerCamera;
 using S1CameraSingleton = ScheduleOne.DevUtilities.PlayerSingleton<ScheduleOne.PlayerScripts.PlayerCamera>;
 using S1NativeTimeManager = ScheduleOne.GameTime.TimeManager;
 using S1Registry = ScheduleOne.Registry;
+using UsableComputer.Tests.Shared;
 
 [assembly: MelonInfo(
     typeof(UsableComputer.DisplaySmoke.Core),
@@ -173,7 +174,7 @@ public sealed class Core : MelonMod
         try
         {
             Assembly assembly = GetUsableComputerAssembly();
-            Type profile = assembly.GetType("UsableComputer.DisplayProfile", throwOnError: true)!;
+            Type profile = assembly.GetType(ModTypeNames.DisplayProfile, throwOnError: true)!;
             scale = ReadConstant<float>(profile, "ModelScale");
             fieldOfView = ReadConstant<float>(profile, "InteractionFieldOfView");
             Require(Math.Abs(scale - 1.15f) < 0.001f, $"Unexpected model scale: {scale}");
@@ -213,7 +214,7 @@ public sealed class Core : MelonMod
             _playerCamera.OverrideFOV(fieldOfView, 0f);
             _fovOverridden = true;
 
-            Type shellType = assembly.GetType("UsableComputer.UI.DesktopShell", throwOnError: true)!;
+            Type shellType = assembly.GetType(ModTypeNames.DesktopShell, throwOnError: true)!;
             object shell = Activator.CreateInstance(
                 shellType,
                 BindingFlags.Instance | BindingFlags.NonPublic,
@@ -341,7 +342,7 @@ public sealed class Core : MelonMod
 
     private static GameObject CreateComputerModel(Assembly assembly, GameObject donorObject)
     {
-        Type factory = assembly.GetType("UsableComputer.Content.NativeComputerModelFactory", throwOnError: true)!;
+        Type factory = assembly.GetType(ModTypeNames.NativeComputerModelFactory, throwOnError: true)!;
         MethodInfo create = factory.GetMethod("Create", BindingFlags.Static | BindingFlags.NonPublic)!;
         return (GameObject)(create.Invoke(null, new object[] { donorObject })
             ?? throw new InvalidOperationException("The physical computer model could not be created."));

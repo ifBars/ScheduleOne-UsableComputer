@@ -1,5 +1,5 @@
-using UsableComputer.API;
-using UsableComputer.Logic;
+using UsableComputer.Kernel;
+using UsableComputer.Native;
 
 var tests = new (string Name, Action Test)[]
 {

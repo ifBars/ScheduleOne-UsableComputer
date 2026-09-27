@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Tests.Shared;
 
 namespace UsableComputer.VfsSmoke;
 
@@ -14,7 +15,7 @@ public sealed partial class Core
         Texture2D texture;
         try
         {
-            Type locator = GetUsableComputerAssembly().GetType("UsableComputer.Doom.DoomWadLocator", true)!;
+            Type locator = GetUsableComputerAssembly().GetType(ModTypeNames.DoomWadLocator, true)!;
             string? wad = (string?)locator.GetMethod("FindIwad", BindingFlags.Static | BindingFlags.NonPublic)!
                 .Invoke(null, null);
             if (wad == null || !Path.GetFileName(wad).StartsWith("freedoom", StringComparison.OrdinalIgnoreCase))

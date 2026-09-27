@@ -7,6 +7,7 @@ using System.Runtime.InteropServices;
 using HarmonyLib;
 using MelonLoader;
 using UnityEngine;
+using UsableComputer.Apps.Games.NestedGame;
 
 [assembly: MelonInfo(
     typeof(UsableComputer.ChildHost.Core),
@@ -20,8 +21,8 @@ namespace UsableComputer.ChildHost;
 public sealed class Core : MelonMod
 {
     private const float CaptureInterval = 0.1f;
-    private const int CaptureWidth = UsableComputer.DisplayProfile.NestedWidth;
-    private const int CaptureHeight = UsableComputer.DisplayProfile.NestedHeight;
+    private const int CaptureWidth = UsableComputer.Hardware.DisplayProfile.NestedWidth;
+    private const int CaptureHeight = UsableComputer.Hardware.DisplayProfile.NestedHeight;
     private MemoryMappedFile? _mapping;
     private MemoryMappedViewAccessor? _view;
     private Process? _parent;
@@ -44,7 +45,7 @@ public sealed class Core : MelonMod
     public override void OnInitializeMelon()
     {
         string[] args = Environment.GetCommandLineArgs();
-        if (Array.IndexOf(args, NestedChildProtocol.MarkerArgument) < 0)
+        if (Array.IndexOf(args, NestedGameProtocol.MarkerArgument) < 0)
             return;
         if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
         {
@@ -52,9 +53,9 @@ public sealed class Core : MelonMod
             return;
         }
 
-        string mappingName = GetArgument(args, NestedChildProtocol.MappingArgument);
-        string profilePath = GetArgument(args, NestedChildProtocol.ProfileArgument);
-        string parentText = GetArgument(args, NestedChildProtocol.ParentArgument);
+        string mappingName = GetArgument(args, NestedGameProtocol.MappingArgument);
+        string profilePath = GetArgument(args, NestedGameProtocol.ProfileArgument);
+        string parentText = GetArgument(args, NestedGameProtocol.ParentArgument);
         if (string.IsNullOrWhiteSpace(mappingName) ||
             string.IsNullOrWhiteSpace(profilePath) ||
             !int.TryParse(parentText, out int parentId))
@@ -69,11 +70,11 @@ public sealed class Core : MelonMod
             NestedChildContext.Activate(profilePath);
             PatchChildDisplaySettings();
             _mapping = MemoryMappedFile.OpenExisting(mappingName, MemoryMappedFileRights.ReadWrite);
-            _view = _mapping.CreateViewAccessor(0, NestedChildProtocol.MappingSize, MemoryMappedFileAccess.ReadWrite);
+            _view = _mapping.CreateViewAccessor(0, NestedGameProtocol.MappingSize, MemoryMappedFileAccess.ReadWrite);
             _parent = Process.GetProcessById(parentId);
             Application.runInBackground = true;
             Application.targetFrameRate = 30;
-            WriteHeader(NestedChildProtocol.StateStarting, 0, 0, 0, 0);
+            WriteHeader(NestedGameProtocol.StateStarting, 0, 0, 0, 0);
             _active = true;
             MelonLogger.Msg($"[NestedGameHost] Started with isolated profile '{profilePath}'.");
         }
@@ -144,10 +145,10 @@ public sealed class Core : MelonMod
                 bytes[offset + 3] = pixel.a;
             }
 
-            view.WriteArray(NestedChildProtocol.HeaderSize, bytes, 0, bytes.Length);
+            view.WriteArray(NestedGameProtocol.HeaderSize, bytes, 0, bytes.Length);
             _frameId++;
             long handle = _windowHandle.ToInt64();
-            WriteHeader(NestedChildProtocol.StateReady, _frameId, width, height, handle);
+            WriteHeader(NestedGameProtocol.StateReady, _frameId, width, height, handle);
         }
         catch (Exception exception)
         {
@@ -252,7 +253,7 @@ public sealed class Core : MelonMod
         if (_view == null)
             return;
 
-        _view.Write(0, NestedChildProtocol.Magic);
+        _view.Write(0, NestedGameProtocol.Magic);
         _view.Write(4, state);
         _view.Write(8, frameId);
         _view.Write(12, width);
@@ -265,7 +266,7 @@ public sealed class Core : MelonMod
     private void WriteError()
     {
         if (_view != null)
-            WriteHeader(NestedChildProtocol.StateError, _frameId, 0, 0, 0);
+            WriteHeader(NestedGameProtocol.StateError, _frameId, 0, 0, 0);
     }
 
     private void DisposeBridge()

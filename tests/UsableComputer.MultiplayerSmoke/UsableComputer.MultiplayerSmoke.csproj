@@ -45,4 +45,8 @@
     <Reference Include="Il2CppInterop.Runtime" HintPath="$(MelonLoaderPath)\Il2CppInterop.Runtime.dll" Private="false" />
     <Reference Include="Il2Cppmscorlib" HintPath="$(ManagedPath)\Il2Cppmscorlib.dll" Private="false" />
   </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Shared\ModTypeNames.cs" Link="Shared\ModTypeNames.cs" />
+  </ItemGroup>
 </Project>

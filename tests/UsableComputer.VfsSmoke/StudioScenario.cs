@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Tests.Shared;
 #if IL2CPP
 using StudioInput = Il2CppTMPro.TMP_InputField;
 using StudioText = Il2CppTMPro.TextMeshProUGUI;
@@ -22,7 +23,7 @@ public sealed partial class Core
         try
         {
             CloseAllWindows();
-            Type preferences = GetUsableComputerAssembly().GetType("UsableComputer.PreferencesStore", true)!;
+            Type preferences = GetUsableComputerAssembly().GetType(ModTypeNames.PreferencesStore, true)!;
             MethodInfo setTheme = preferences.GetMethod("SetTheme", BindingFlags.Static | BindingFlags.NonPublic)!;
             setTheme.Invoke(null, new[] { Enum.Parse(setTheme.GetParameters()[0].ParameterType, _phase == "seed" ? "Light" : "Dark") });
             _desktop!.GetType().GetMethod("OpenApp", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(_desktop, new object[] { "app-studio" });
@@ -67,7 +68,7 @@ public sealed partial class Core
             GameObject.Find("PreviousDraft").GetComponent<Button>().onClick.Invoke();
             Require(editor.text == source, "Switching templates discarded edits.");
             object[] args = { "" };
-            Type manager = GetUsableComputerAssembly().GetType("UsableComputer.Scripting.LuaAppManager", true)!;
+            Type manager = GetUsableComputerAssembly().GetType(ModTypeNames.LuaAppManager, true)!;
             Require((bool)manager.GetMethod("TryValidateBundledTemplatesAtRuntime", BindingFlags.Static | BindingFlags.NonPublic)!.Invoke(null, args)!, "Bundled template failed: " + args[0]);
             GameObject.Find("Window_app-studio").transform.Find("TitleBar/Maximize").GetComponent<Button>().onClick.Invoke();
         }
@@ -100,7 +101,7 @@ public sealed partial class Core
     private void VerifyStudioSave(StudioInput editor)
     {
         string id = "smoke-studio-" + Guid.NewGuid().ToString("N");
-        Type manager = GetUsableComputerAssembly().GetType("UsableComputer.Scripting.LuaAppManager", true)!;
+        Type manager = GetUsableComputerAssembly().GetType(ModTypeNames.LuaAppManager, true)!;
         string root = (string)manager.GetProperty("AppsDirectory", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
         string path = Path.Combine(root, id + ".lua");
         Require(!File.Exists(path), "Unique Studio fixture already exists.");

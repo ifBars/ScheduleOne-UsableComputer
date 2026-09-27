@@ -5,6 +5,7 @@ These standards cover the C#, Unity, and test code in Usable Computer. Project w
 ## C# style
 
 - Use four spaces, file-scoped namespaces, nullable annotations, and implicit usings.
+- Match namespaces to folders. See the source layout in [AGENTS.md](AGENTS.md#source-layout) before adding a folder.
 - Use `PascalCase` for types and methods, `camelCase` for locals, and descriptive constant names.
 - Keep methods focused. Extract stateful behavior when a method mixes lifecycle, rendering, and persistence concerns.
 - Prefer explicit types when they clarify a game or Unity boundary. Use `var` when the assigned type is obvious.

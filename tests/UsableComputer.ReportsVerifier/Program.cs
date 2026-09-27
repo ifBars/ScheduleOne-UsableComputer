@@ -1,5 +1,5 @@
 using Newtonsoft.Json;
-using UsableComputer.Reports;
+using UsableComputer.Apps.Reports;
 
 int assertions = 0;
 void Check(bool condition, string message)

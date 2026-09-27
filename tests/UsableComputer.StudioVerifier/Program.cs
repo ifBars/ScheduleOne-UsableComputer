@@ -1,5 +1,5 @@
 using MoonSharp.Interpreter;
-using UsableComputer.Logic;
+using UsableComputer.Apps.AppStudio;
 
 int checks = 0;
 void Check(bool condition) { if (!condition) throw new Exception($"Studio assertion {checks + 1} failed"); checks++; }

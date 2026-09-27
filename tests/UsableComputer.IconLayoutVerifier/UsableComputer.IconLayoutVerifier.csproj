@@ -6,8 +6,8 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="../../src/DisplayProfile.cs" Link="DisplayProfile.cs" />
-    <Compile Include="../../src/Logic/DesktopIconLayout.cs" Link="DesktopIconLayout.cs" />
+    <Compile Include="../../src/Hardware/DisplayProfile.cs" Link="DisplayProfile.cs" />
+    <Compile Include="../../src/Shell/DesktopIconLayout.cs" Link="DesktopIconLayout.cs" />
     <Compile Include="../../src/FileSystem/VirtualFileSystemNode.cs" Link="VirtualFileSystemNode.cs" />
     <Compile Include="../../src/FileSystem/VirtualFileSystemNodeKind.cs" Link="VirtualFileSystemNodeKind.cs" />
   </ItemGroup>

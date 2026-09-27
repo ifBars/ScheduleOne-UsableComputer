@@ -2,6 +2,7 @@ using System.Collections;
 using System.Reflection;
 using MelonLoader;
 using UnityEngine;
+using UsableComputer.Tests.Shared;
 
 #if IL2CPP
 using Il2CppInterop.Runtime;
@@ -230,7 +231,7 @@ public sealed class Core : MelonMod
         yield return WaitUntil(() => File.Exists(Path.Combine(_root, "manifest.txt")), 60, "Host feature manifest did not arrive.");
         if (_finished) yield break;
             Dictionary<string, string> manifest = ReadManifest();
-            object dealers = CreateAdapter("UsableComputer.Native.DealersNativeAdapter");
+            object dealers = CreateAdapter(ModTypeNames.DealersNativeAdapter);
             RefreshAdapter(dealers, 3, "Dealer");
             Require(InvokeBool(dealers, "TryChangeCustomer", manifest["dealer"], manifest["customer"], true), "Client adapter rejected dealer assignment.");
             Write("client-assigned", "requested=true");
@@ -245,7 +246,7 @@ public sealed class Core : MelonMod
             if (_finished) yield break;
             RefreshAdapter(dealers, 3, "Dealer");
 
-            object deliveries = CreateAdapter("UsableComputer.Native.DeliveriesNativeAdapter");
+            object deliveries = CreateAdapter(ModTypeNames.DeliveriesNativeAdapter);
             RefreshAdapter(deliveries, 2, "Delivery");
             object?[] quoteArgs = { manifest["receipt"], 0m, string.Empty };
             bool quoteOk = (bool)(Method(deliveries, "TryQuote", 3).Invoke(deliveries, quoteArgs) ?? false);

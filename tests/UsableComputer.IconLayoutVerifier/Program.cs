@@ -1,6 +1,6 @@
 using UsableComputer.FileSystem;
-using UsableComputer.Logic;
-using UsableComputer;
+using UsableComputer.Shell;
+using UsableComputer.Hardware;
 
 int passed = 0;
 void Check(bool condition, string message)

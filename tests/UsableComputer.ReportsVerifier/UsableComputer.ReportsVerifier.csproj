@@ -7,6 +7,6 @@
   </PropertyGroup>
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.2" />
-    <Compile Include="../../src/Reports/BankReportBook.cs" Link="BankReportBook.cs" />
+    <Compile Include="../../src/Apps/Reports/BankReportBook.cs" Link="BankReportBook.cs" />
   </ItemGroup>
 </Project>
