@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using UsableComputer.FileSystem;
 
-namespace UsableComputer.Logic;
+namespace UsableComputer.Shell;
 
 internal enum DesktopIconSize { Small, Medium, Large }
 internal enum DesktopIconOrder { Name, Kind }

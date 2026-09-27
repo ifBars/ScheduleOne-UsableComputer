@@ -1,5 +1,5 @@
 using MoonSharp.Interpreter;
-using UsableComputer.Scripting;
+using UsableComputer.Subsystems.Lua;
 
 int checks = 0;
 void Check(bool value) { if (!value) throw new Exception($"Assertion {checks + 1} failed"); checks++; }

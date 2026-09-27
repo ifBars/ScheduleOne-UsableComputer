@@ -1,6 +1,6 @@
 using System;
-using UsableComputer.Logic;
 using UsableComputer.API;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -15,7 +15,7 @@ using S1Input = TMPro.TMP_InputField;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Calculator;
 
 internal sealed class CalculatorApp : IDesktopAppSession
 {

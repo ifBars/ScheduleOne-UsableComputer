@@ -1,4 +1,5 @@
-using UsableComputer.Logic;
+using UsableComputer.Apps.Products;
+using UsableComputer.Native;
 
 var products = new[]
 {

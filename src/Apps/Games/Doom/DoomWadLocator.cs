@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using MelonLoader.Utils;
 
-namespace UsableComputer.Doom;
+namespace UsableComputer.Apps.Games.Doom;
 
 internal static class DoomWadLocator
 {

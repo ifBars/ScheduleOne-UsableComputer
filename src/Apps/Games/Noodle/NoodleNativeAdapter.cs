@@ -10,7 +10,7 @@ using NativeHome = ScheduleOne.TV.TVHomeScreen;
 using NativeSnake = ScheduleOne.TV.Snake;
 #endif
 
-namespace UsableComputer.Native;
+namespace UsableComputer.Apps.Games.Noodle;
 
 internal static class NoodleNativeAdapter
 {

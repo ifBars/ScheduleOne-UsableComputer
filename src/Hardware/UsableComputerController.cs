@@ -1,6 +1,6 @@
 using System;
 using S1API.Utils;
-using UsableComputer.UI;
+using UsableComputer.Shell;
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -29,7 +29,7 @@ using S1SceneState = ScheduleOne.SceneState;
 using S1StateProperties = ScheduleOne.State.StateProperties;
 #endif
 
-namespace UsableComputer.Runtime;
+namespace UsableComputer.Hardware;
 
 internal sealed class UsableComputerController : IDisposable
 {

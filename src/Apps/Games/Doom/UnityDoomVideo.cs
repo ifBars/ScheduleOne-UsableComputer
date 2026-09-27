@@ -4,7 +4,7 @@ using ManagedDoom.Video;
 using UnityEngine;
 using DoomRenderer = ManagedDoom.Video.Renderer;
 
-namespace UsableComputer.Doom;
+namespace UsableComputer.Apps.Games.Doom;
 
 internal sealed class UnityDoomVideo : IVideo, IDisposable
 {

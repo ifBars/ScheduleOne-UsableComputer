@@ -1,5 +1,6 @@
 using UnityEngine;
 using UsableComputer.API;
+using UsableComputer.UI;
 
 #if IL2CPPMELON
 using S1Text = Il2CppTMPro.TextMeshProUGUI;
@@ -7,7 +8,7 @@ using S1Text = Il2CppTMPro.TextMeshProUGUI;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.About;
 
 internal sealed class AboutApp : IDesktopAppSession
 {

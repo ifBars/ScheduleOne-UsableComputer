@@ -1,9 +1,7 @@
 using System;
-using UsableComputer.Native;
-using UsableComputer.Persistence;
 using UnityEngine;
 
-namespace UsableComputer.Reports;
+namespace UsableComputer.Apps.Reports;
 
 internal static class BankReportsService
 {

@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UsableComputer.API;
-using UsableComputer.Native;
+using UsableComputer.Shell;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
@@ -26,7 +27,7 @@ using S1Text = TMPro.TextMeshProUGUI;
 using TextAlignment = TMPro.TextAlignmentOptions;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Games.EggRun;
 
 internal sealed class EggRunApp : IDesktopAppSession, IDesktopAppVisibilitySession
 {

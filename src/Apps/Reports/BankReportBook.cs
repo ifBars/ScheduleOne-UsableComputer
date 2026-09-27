@@ -4,7 +4,7 @@ using System.Globalization;
 using System.Linq;
 using System.Text;
 
-namespace UsableComputer.Reports;
+namespace UsableComputer.Apps.Reports;
 
 internal sealed class BankReportSnapshot
 {

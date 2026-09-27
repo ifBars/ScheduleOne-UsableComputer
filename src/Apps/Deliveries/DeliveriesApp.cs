@@ -2,9 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using UsableComputer.API;
-using UsableComputer.Logic;
-using UsableComputer.Native;
-using UsableComputer.Reports;
+using UsableComputer.Apps.Reports;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -20,7 +19,7 @@ using S1Wrapping = TMPro.TextWrappingModes;
 using S1Overflow = TMPro.TextOverflowModes;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Deliveries;
 
 internal sealed class DeliveriesApp : IDesktopAppSession
 {

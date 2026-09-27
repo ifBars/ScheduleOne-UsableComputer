@@ -1,6 +1,8 @@
 using System;
 using UsableComputer.API;
 using UsableComputer.FileSystem;
+using UsableComputer.Shell;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -15,7 +17,7 @@ using S1Text = TMPro.TextMeshProUGUI;
 using S1Alignment = TMPro.TextAlignmentOptions;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Notes;
 
 internal sealed class NotesApp : IDesktopAppSession
 {

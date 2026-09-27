@@ -4,7 +4,8 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 using UsableComputer.API;
-using UsableComputer.NestedGame;
+using UsableComputer.Shell;
+using UsableComputer.UI;
 using UiButton = UnityEngine.UI.Button;
 
 #if IL2CPPMELON
@@ -13,7 +14,7 @@ using S1Text = Il2CppTMPro.TextMeshProUGUI;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Games.NestedGame;
 
 internal sealed class NestedGameApp : IDesktopAppSession, IDesktopAppVisibilitySession
 {

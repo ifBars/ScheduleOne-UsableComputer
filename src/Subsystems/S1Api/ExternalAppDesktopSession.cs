@@ -4,7 +4,7 @@ using UsableComputer.API;
 using UsableComputer.UI;
 using UnityEngine;
 
-namespace UsableComputer.Bridge;
+namespace UsableComputer.Subsystems.S1Api;
 
 /// <summary>Owns only the external session; it never invokes device open or close methods.</summary>
 internal sealed class ExternalAppDesktopSession : IDesktopAppSession

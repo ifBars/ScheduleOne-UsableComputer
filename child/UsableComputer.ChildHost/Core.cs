@@ -20,8 +20,8 @@ namespace UsableComputer.ChildHost;
 public sealed class Core : MelonMod
 {
     private const float CaptureInterval = 0.1f;
-    private const int CaptureWidth = UsableComputer.DisplayProfile.NestedWidth;
-    private const int CaptureHeight = UsableComputer.DisplayProfile.NestedHeight;
+    private const int CaptureWidth = UsableComputer.Hardware.DisplayProfile.NestedWidth;
+    private const int CaptureHeight = UsableComputer.Hardware.DisplayProfile.NestedHeight;
     private MemoryMappedFile? _mapping;
     private MemoryMappedViewAccessor? _view;
     private Process? _parent;

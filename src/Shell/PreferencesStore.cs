@@ -1,12 +1,11 @@
 using MelonLoader;
 using System;
-using UsableComputer.UI;
-using UsableComputer.Logic;
+using UsableComputer.FileSystem;
 using System.Globalization;
 using System.Collections.Generic;
 using UnityEngine;
 
-namespace UsableComputer;
+namespace UsableComputer.Shell;
 
 internal static class PreferencesStore
 {
@@ -72,7 +71,7 @@ internal static class PreferencesStore
         IconPositions[id] = position;
         var entries = new List<string>();
         foreach (var pair in IconPositions)
-            if (FileSystem.VirtualFileSystemService.TryGetNode(pair.Key, out _))
+            if (VirtualFileSystemService.TryGetNode(pair.Key, out _))
                 entries.Add(pair.Key + "|" + pair.Value.x.ToString(CultureInfo.InvariantCulture) + "|" + pair.Value.y.ToString(CultureInfo.InvariantCulture));
         _iconPositions!.Value = string.Join(";", entries);
         MelonPreferences.Save();

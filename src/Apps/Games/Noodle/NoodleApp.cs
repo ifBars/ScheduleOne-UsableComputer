@@ -1,7 +1,7 @@
 using System;
 using System.Reflection;
 using UsableComputer.API;
-using UsableComputer.Native;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -17,7 +17,7 @@ using S1Text = TMPro.TextMeshProUGUI;
 using TextAlignment = TMPro.TextAlignmentOptions;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Games.Noodle;
 
 internal sealed class NoodleApp : IDesktopAppSession
 {

@@ -1,6 +1,5 @@
 using System;
 using MoonSharp.Interpreter;
-using UsableComputer.Persistence;
 
 #if IL2CPPMELON
 using NativeMoney = Il2CppScheduleOne.Money.MoneyManager;
@@ -8,7 +7,7 @@ using NativeMoney = Il2CppScheduleOne.Money.MoneyManager;
 using NativeMoney = ScheduleOne.Money.MoneyManager;
 #endif
 
-namespace UsableComputer.Scripting;
+namespace UsableComputer.Subsystems.Lua;
 
 internal static class LuaStorageService
 {

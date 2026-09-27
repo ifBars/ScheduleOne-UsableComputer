@@ -1,5 +1,4 @@
 using System;
-using UsableComputer.Reports;
 
 #if IL2CPPMELON
 using S1MoneyManager = Il2CppScheduleOne.Money.MoneyManager;
@@ -11,7 +10,7 @@ using S1TimeManager = ScheduleOne.GameTime.TimeManager;
 using S1LoadManager = ScheduleOne.Persistence.LoadManager;
 #endif
 
-namespace UsableComputer.Native;
+namespace UsableComputer.Apps.Reports;
 
 internal sealed class BankReportsNativeAdapter
 {

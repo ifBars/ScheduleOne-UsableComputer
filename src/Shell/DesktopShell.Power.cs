@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
+using UsableComputer.UI;
 
 #if IL2CPPMELON
 using S1GameInput = Il2CppScheduleOne.GameInput;
@@ -10,7 +11,7 @@ using S1GameInput = ScheduleOne.GameInput;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Shell;
 
 internal sealed partial class DesktopShell
 {

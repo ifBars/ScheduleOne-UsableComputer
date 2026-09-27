@@ -1,7 +1,7 @@
 using System;
 using MoonSharp.Interpreter;
 using UsableComputer.API;
-using UsableComputer.Scripting;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,7 +11,7 @@ using S1Text = Il2CppTMPro.TextMeshProUGUI;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Subsystems.Lua;
 
 internal sealed class LuaDesktopAppSession : IDesktopAppSession
 {

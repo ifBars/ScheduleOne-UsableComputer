@@ -2,8 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using UsableComputer.API;
-using UsableComputer.Logic;
 using UsableComputer.Native;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,7 +13,7 @@ using S1Text = Il2CppTMPro.TextMeshProUGUI;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Journal;
 
 internal sealed class JournalApp : IDesktopAppSession
 {

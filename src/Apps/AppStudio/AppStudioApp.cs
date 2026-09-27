@@ -1,5 +1,6 @@
 using UsableComputer.API;
-using UsableComputer.Scripting;
+using UsableComputer.Subsystems.Lua;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,7 +12,7 @@ using S1Input = TMPro.TMP_InputField;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.AppStudio;
 
 internal sealed partial class AppStudioApp : IDesktopAppSession
 {
@@ -195,9 +196,9 @@ internal sealed partial class AppStudioApp : IDesktopAppSession
         try
         {
             bool saved = LuaAppManager.TrySaveAndRegister(_editor.text, out string message, out string appId);
-            _status.text = saved ? message : "Error: " + UsableComputer.Logic.StudioSource.DescribeDiagnostic(message);
+            _status.text = saved ? message : "Error: " + StudioSource.DescribeDiagnostic(message);
             _status.color = saved ? UiFactory.Success : UiFactory.TextPrimary;
-            _diagnosticLine = saved ? 0 : UsableComputer.Logic.StudioSource.DiagnosticLine(message);
+            _diagnosticLine = saved ? 0 : StudioSource.DiagnosticLine(message);
             if (saved) _document.SavedSource = _savedSource = _editor.text;
             UpdateDocumentLabel();
             _errorButton.interactable = _diagnosticLine > 0;

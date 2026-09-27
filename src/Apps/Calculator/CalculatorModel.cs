@@ -1,7 +1,7 @@
 using System.Globalization;
 using System.Text;
 
-namespace UsableComputer.Logic;
+namespace UsableComputer.Apps.Calculator;
 
 public enum CalculatorOperator
 {

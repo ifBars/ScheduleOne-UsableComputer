@@ -1,8 +1,7 @@
 using S1API.Internal.Abstraction;
 using S1API.Saveables;
-using UsableComputer.Reports;
 
-namespace UsableComputer.Persistence;
+namespace UsableComputer.Apps.Reports;
 
 public sealed class UsableComputerReportsSave : Saveable
 {

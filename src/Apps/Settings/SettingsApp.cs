@@ -1,5 +1,6 @@
 using UsableComputer.API;
-using UsableComputer.Logic;
+using UsableComputer.Shell;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -9,7 +10,7 @@ using S1Text = Il2CppTMPro.TextMeshProUGUI;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Settings;
 
 internal sealed class SettingsApp : IDesktopAppSession
 {

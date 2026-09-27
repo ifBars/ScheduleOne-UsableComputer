@@ -1,6 +1,7 @@
 using System;
 using System.Linq;
 using UsableComputer.API;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,7 +13,7 @@ using S1Text = TMPro.TextMeshProUGUI;
 using S1Alignment = TMPro.TextAlignmentOptions;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.SystemMonitor;
 
 internal sealed class SystemMonitorApp : IDesktopAppSession
 {

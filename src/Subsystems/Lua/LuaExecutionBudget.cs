@@ -2,7 +2,7 @@ using System;
 using System.Diagnostics;
 using MoonSharp.Interpreter;
 
-namespace UsableComputer.Scripting;
+namespace UsableComputer.Subsystems.Lua;
 
 internal static class LuaExecutionBudget
 {

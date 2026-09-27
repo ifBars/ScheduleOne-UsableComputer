@@ -1,8 +1,7 @@
 using S1API.Internal.Abstraction;
 using S1API.Saveables;
-using UsableComputer.FileSystem;
 
-namespace UsableComputer.Persistence;
+namespace UsableComputer.FileSystem;
 
 public sealed class UsableComputerFileSystemSave : Saveable
 {

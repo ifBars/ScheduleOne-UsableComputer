@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UsableComputer.Logic;
 
 #if IL2CPPMELON
 using Il2CppInterop.Runtime;
@@ -18,7 +17,7 @@ using S1Product = ScheduleOne.Product.ProductItemInstance;
 using S1LoadManager = ScheduleOne.Persistence.LoadManager;
 #endif
 
-namespace UsableComputer.Native;
+namespace UsableComputer.Apps.Dealers;
 
 internal sealed class DealersNativeAdapter
 {

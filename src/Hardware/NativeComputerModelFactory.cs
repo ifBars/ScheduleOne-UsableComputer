@@ -8,7 +8,7 @@ using S1GridItem = Il2CppScheduleOne.EntityFramework.GridItem;
 using S1GridItem = ScheduleOne.EntityFramework.GridItem;
 #endif
 
-namespace UsableComputer.Content;
+namespace UsableComputer.Hardware;
 
 /// <summary>
 /// Builds the runtime visuals from game-owned objects without retaining their behavior.

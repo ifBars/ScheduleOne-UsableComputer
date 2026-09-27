@@ -1,4 +1,4 @@
-using UsableComputer.Logic;
+using UsableComputer.Apps.Calculator;
 
 var tests = new (string Name, Action Test)[]
 {

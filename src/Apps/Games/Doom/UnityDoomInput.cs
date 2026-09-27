@@ -5,7 +5,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.InputSystem.Controls;
 
-namespace UsableComputer.Doom;
+namespace UsableComputer.Apps.Games.Doom;
 
 internal sealed class UnityDoomInput : IUserInput
 {

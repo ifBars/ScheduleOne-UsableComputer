@@ -1,8 +1,9 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.UI;
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Shell;
 
 /// <summary>
 /// Small original landscape generated at runtime so the desktop has a recognizable, asset-free backdrop.

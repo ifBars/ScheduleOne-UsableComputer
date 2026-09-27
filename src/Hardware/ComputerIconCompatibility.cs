@@ -8,7 +8,7 @@ using S1IconGenerator = Il2CppScheduleOne.DevUtilities.IconGenerator;
 using S1IconGenerator = ScheduleOne.DevUtilities.IconGenerator;
 #endif
 
-namespace UsableComputer.Content;
+namespace UsableComputer.Hardware;
 
 /// <summary>Adapts our S1API furniture previews to the beta's renamed render layer.</summary>
 [HarmonyPatch(typeof(S1IconGenerator), "GetTexture")]

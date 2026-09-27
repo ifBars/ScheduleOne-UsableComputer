@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Shell;
 using UsableComputer.UI;
 
 namespace UsableComputer.API;

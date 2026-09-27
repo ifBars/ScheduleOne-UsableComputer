@@ -1,8 +1,7 @@
 using S1API.Internal.Abstraction;
 using S1API.Saveables;
-using UsableComputer.Scripting;
 
-namespace UsableComputer.Persistence;
+namespace UsableComputer.Subsystems.Lua;
 
 public sealed class UsableComputerLuaStorageSave : Saveable
 {

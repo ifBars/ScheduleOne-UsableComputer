@@ -1,11 +1,11 @@
 using System.Text;
 using UsableComputer.API;
-using UsableComputer.Logic;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.UI;
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.AppStudio;
 
 internal sealed partial class AppStudioApp
 {

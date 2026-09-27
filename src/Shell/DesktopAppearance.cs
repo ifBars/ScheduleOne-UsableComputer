@@ -1,4 +1,4 @@
-namespace UsableComputer.UI;
+namespace UsableComputer.Shell;
 
 internal enum DesktopTheme
 {

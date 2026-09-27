@@ -4,7 +4,7 @@ using S1API.ExternalHosting;
 using UsableComputer.API;
 using UnityEngine;
 
-namespace UsableComputer.Bridge;
+namespace UsableComputer.Subsystems.S1Api;
 
 /// <summary>
 /// Mirrors explicitly hostable S1API apps into the desktop registry.

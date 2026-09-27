@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 
-namespace UsableComputer.Logic;
+namespace UsableComputer.Native;
 
 internal sealed class JournalEntryViewModel
 {

@@ -2,7 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
-namespace UsableComputer.API;
+namespace UsableComputer.Kernel;
 
 /// <summary>
 /// Unity-free storage and ordering contract used by the public desktop registry.

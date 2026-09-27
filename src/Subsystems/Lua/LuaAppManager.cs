@@ -9,11 +9,10 @@ using S1API.Entities;
 using S1API.Money;
 using S1API.Property;
 using UsableComputer.API;
-using UsableComputer.Logic;
+using UsableComputer.Apps.AppStudio;
 using UsableComputer.Native;
-using UsableComputer.UI;
 
-namespace UsableComputer.Scripting;
+namespace UsableComputer.Subsystems.Lua;
 
 internal static class LuaAppManager
 {

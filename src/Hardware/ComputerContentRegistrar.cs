@@ -16,7 +16,7 @@ using S1BuildableDefinition = ScheduleOne.ItemFramework.BuildableItemDefinition;
 using S1Registry = ScheduleOne.Registry;
 #endif
 
-namespace UsableComputer.Content;
+namespace UsableComputer.Hardware;
 
 internal static class ComputerContentRegistrar
 {

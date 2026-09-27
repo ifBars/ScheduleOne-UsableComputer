@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace UsableComputer.Logic;
+namespace UsableComputer.Apps.AppStudio;
 
 internal sealed class StudioDraft
 {

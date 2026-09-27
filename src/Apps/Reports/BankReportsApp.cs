@@ -1,7 +1,7 @@
 using System;
 using System.Linq;
 using UsableComputer.API;
-using UsableComputer.Reports;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -17,7 +17,7 @@ using S1Wrapping = TMPro.TextWrappingModes;
 using S1Overflow = TMPro.TextOverflowModes;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Reports;
 
 internal sealed class BankReportsApp : IDesktopAppSession
 {

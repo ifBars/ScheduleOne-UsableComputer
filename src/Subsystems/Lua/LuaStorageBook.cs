@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 
-namespace UsableComputer.Scripting;
+namespace UsableComputer.Subsystems.Lua;
 
 internal sealed class LuaStorageSnapshot
 {

@@ -1,4 +1,4 @@
-namespace UsableComputer.NestedGame;
+namespace UsableComputer.Apps.Games.NestedGame;
 
 internal static class NestedGameProtocol
 {

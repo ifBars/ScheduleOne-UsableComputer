@@ -4,7 +4,7 @@ using UnityEngine;
 using UsableComputer.Native;
 using UsableComputer.UI;
 
-namespace UsableComputer.Scripting;
+namespace UsableComputer.Subsystems.Lua;
 
 internal sealed class LuaAppDefinition : IDisposable
 {

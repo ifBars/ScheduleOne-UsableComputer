@@ -1,24 +1,24 @@
 using MelonLoader;
 using UsableComputer.API;
-using UsableComputer.Bridge;
+using UsableComputer.Apps;
+using UsableComputer.Apps.Reports;
+using UsableComputer.FileSystem;
+using UsableComputer.Hardware;
+using UsableComputer.Shell;
+using UsableComputer.Subsystems.Lua;
+using UsableComputer.Subsystems.S1Api;
 using S1API.Building;
 using S1API.Lifecycle;
-using UsableComputer.Content;
-using UsableComputer.FileSystem;
-using UsableComputer.Runtime;
-using UsableComputer.Reports;
-using UsableComputer.Scripting;
-using UsableComputer.UI;
 using UnityEngine;
 
 [assembly: MelonInfo(
-    typeof(UsableComputer.Core),
+    typeof(UsableComputer.Boot.Core),
     UsableComputer.Constants.ModName,
     UsableComputer.Constants.ModVersion,
     UsableComputer.Constants.ModAuthor)]
 [assembly: MelonGame("TVGS", "Schedule I")]
 
-namespace UsableComputer;
+namespace UsableComputer.Boot;
 
 public sealed class Core : MelonMod
 {

@@ -1,8 +1,8 @@
 using System;
 using System.Collections.Generic;
 using UsableComputer.API;
-using UsableComputer.Logic;
 using UsableComputer.Native;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -14,7 +14,7 @@ using S1Text = TMPro.TextMeshProUGUI;
 using ProductOverflow = TMPro.TextOverflowModes;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Products;
 
 internal sealed partial class ProductManagerApp : IDesktopAppSession
 {

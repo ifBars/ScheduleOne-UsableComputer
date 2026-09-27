@@ -14,7 +14,7 @@ using NativeVariables = ScheduleOne.Variables.VariableDatabase;
 using NativeVariableMode = ScheduleOne.Variables.EVariableMode;
 #endif
 
-namespace UsableComputer.Native;
+namespace UsableComputer.Apps.Games.EggRun;
 
 internal static class EggRunNativeAdapter
 {

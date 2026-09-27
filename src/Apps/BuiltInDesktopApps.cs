@@ -1,10 +1,27 @@
 using System;
 using System.Collections.Generic;
 using UsableComputer.API;
+using UsableComputer.Apps.About;
+using UsableComputer.Apps.AppStudio;
+using UsableComputer.Apps.Calculator;
+using UsableComputer.Apps.Dealers;
+using UsableComputer.Apps.Deliveries;
+using UsableComputer.Apps.Files;
+using UsableComputer.Apps.Games.Doom;
+using UsableComputer.Apps.Games.EggRun;
+using UsableComputer.Apps.Games.NestedGame;
+using UsableComputer.Apps.Games.Noodle;
+using UsableComputer.Apps.Journal;
+using UsableComputer.Apps.Notes;
+using UsableComputer.Apps.Products;
+using UsableComputer.Apps.Reports;
+using UsableComputer.Apps.Settings;
+using UsableComputer.Apps.SystemMonitor;
 using UsableComputer.Native;
+using UsableComputer.UI;
 using UnityEngine;
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps;
 
 internal static class BuiltInDesktopApps
 {

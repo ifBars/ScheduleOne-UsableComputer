@@ -1,4 +1,5 @@
 using UsableComputer.FileSystem;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -11,7 +12,7 @@ using S1Input = TMPro.TMP_InputField;
 using S1GameInput = ScheduleOne.GameInput;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Shell;
 
 /// <summary>Desktop-owned clipboard, menus and drag state shared by file surfaces.</summary>
 internal sealed class DesktopFileInteraction : IDisposable

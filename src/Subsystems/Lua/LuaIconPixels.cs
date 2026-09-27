@@ -1,7 +1,7 @@
 using System;
 using MoonSharp.Interpreter;
 
-namespace UsableComputer.Scripting;
+namespace UsableComputer.Subsystems.Lua;
 
 /// <summary>A bounded pixel-art image; parsing never loads files or exposes Unity objects.</summary>
 internal sealed class LuaIconPixels

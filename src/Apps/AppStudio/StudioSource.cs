@@ -1,7 +1,7 @@
 using System;
 using System.Text.RegularExpressions;
 
-namespace UsableComputer.Logic;
+namespace UsableComputer.Apps.AppStudio;
 
 internal static class StudioSource
 {

@@ -1,6 +1,6 @@
 using System.Collections.Generic;
 
-namespace UsableComputer.Logic;
+namespace UsableComputer.Apps.Deliveries;
 
 internal sealed class DeliveryViewModel
 {

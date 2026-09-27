@@ -1,9 +1,10 @@
 using System;
 using System.Collections.Generic;
 using UsableComputer.API;
-using UsableComputer.Native;
 using UsableComputer.FileSystem;
-using UsableComputer.Logic;
+using UsableComputer.Hardware;
+using UsableComputer.Native;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -16,7 +17,7 @@ using S1GameInput = ScheduleOne.GameInput;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Shell;
 
 internal sealed partial class DesktopShell : IDisposable
 {

@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using UsableComputer.Logic;
 
 #if IL2CPPMELON
 using S1DeliveryManager = Il2CppScheduleOne.Delivery.DeliveryManager;
@@ -23,7 +22,7 @@ using S1Registry = ScheduleOne.Registry;
 using S1Status = ScheduleOne.Delivery.EDeliveryStatus;
 #endif
 
-namespace UsableComputer.Native;
+namespace UsableComputer.Apps.Deliveries;
 
 /// <summary>Reads native delivery records and delegates confirmed repeats to the existing order flow.</summary>
 internal sealed class DeliveriesNativeAdapter

@@ -1,6 +1,6 @@
 using System;
 
-namespace UsableComputer;
+namespace UsableComputer.Hardware;
 
 /// <summary>
 /// Defines the physical and rendered dimensions of the usable computer display.

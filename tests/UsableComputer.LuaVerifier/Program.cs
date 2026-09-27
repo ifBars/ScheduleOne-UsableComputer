@@ -1,5 +1,5 @@
 using MoonSharp.Interpreter;
-using UsableComputer.Scripting;
+using UsableComputer.Subsystems.Lua;
 
 var failures = new List<string>();
 

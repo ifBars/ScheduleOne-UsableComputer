@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using UsableComputer.API;
 using UsableComputer.FileSystem;
+using UsableComputer.Shell;
+using UsableComputer.UI;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -15,7 +17,7 @@ using S1Input = TMPro.TMP_InputField;
 using S1Text = TMPro.TextMeshProUGUI;
 #endif
 
-namespace UsableComputer.UI;
+namespace UsableComputer.Apps.Files;
 
 internal sealed class FileExplorerApp : IDesktopAppSession, IDesktopDirectorySession
 {

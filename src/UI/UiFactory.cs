@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 using UnityEngine.UI;
+using UsableComputer.Shell;
 
 #if IL2CPPMELON
 using S1Text = Il2CppTMPro.TextMeshProUGUI;

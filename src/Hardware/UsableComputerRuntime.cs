@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using S1API.Building;
 using UnityEngine;
 
-namespace UsableComputer.Runtime;
+namespace UsableComputer.Hardware;
 
 internal static class UsableComputerRuntime
 {

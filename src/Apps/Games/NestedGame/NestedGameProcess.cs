@@ -5,8 +5,9 @@ using System.IO.MemoryMappedFiles;
 using System.Runtime.InteropServices;
 using MelonLoader;
 using MelonLoader.Utils;
+using UsableComputer.Hardware;
 
-namespace UsableComputer.NestedGame;
+namespace UsableComputer.Apps.Games.NestedGame;
 
 internal sealed class NestedGameProcess : IDisposable
 {

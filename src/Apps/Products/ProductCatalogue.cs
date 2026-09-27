@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using UsableComputer.Native;
 
-namespace UsableComputer.Logic;
+namespace UsableComputer.Apps.Products;
 
 internal enum ProductFilter { All, Listed, Unlisted, Favourites }
 internal enum ProductSort { Name, ValueHigh, ValueLow }
