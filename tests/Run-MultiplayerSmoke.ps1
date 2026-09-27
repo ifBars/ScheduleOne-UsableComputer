@@ -7,6 +7,7 @@ param(
     [string] $UsableComputerDll,
     [string] $S1ApiDll,
     [string] $SmokeDll,
+    [string] $UserLibsSourceDirectory,
     [string] $FixtureSavePath = 'C:\Users\ghost\AppData\LocalLow\TVGS\Schedule I\Saves\76561198000000009\SaveGame_2',
     [string] $OutputRoot,
     [string] $HostSteamId = '76561198000000009',
@@ -43,6 +44,9 @@ if ([string]::IsNullOrWhiteSpace($S1ApiDll)) {
 if ([string]::IsNullOrWhiteSpace($SmokeDll)) {
     $targetFramework = if ($Runtime -eq 'Mono') { 'netstandard2.1' } else { 'net6.0' }
     $SmokeDll = Join-Path $PSScriptRoot "UsableComputer.MultiplayerSmoke\bin\$Runtime\$targetFramework\UsableComputer.MultiplayerSmoke.dll"
+}
+if ([string]::IsNullOrWhiteSpace($UserLibsSourceDirectory)) {
+    $UserLibsSourceDirectory = Split-Path -Parent $UsableComputerDll
 }
 if ([string]::IsNullOrWhiteSpace($OutputRoot)) {
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
@@ -155,7 +159,7 @@ Require-File $UsableComputerDll 'Runtime-matched UsableComputer assembly'
 Require-File $S1ApiDll 'Runtime-matched S1API assembly'
 Require-File $SmokeDll 'Runtime-matched multiplayer smoke assembly'
 foreach ($dependency in @('MoonSharp.Interpreter.dll', 'ManagedDoom.Core.dll', 'UsableComputer.ChildHost.dll')) {
-    Require-File (Join-Path (Split-Path -Parent $UsableComputerDll) $dependency) "UsableComputer runtime dependency $dependency"
+    Require-File (Join-Path $UserLibsSourceDirectory $dependency) "UsableComputer runtime dependency $dependency"
 }
 if ($HostSteamId -eq $ClientSteamId) { throw 'HostSteamId and ClientSteamId must be distinct.' }
 foreach ($steamId in @($HostSteamId, $ClientSteamId)) {
@@ -164,7 +168,6 @@ foreach ($steamId in @($HostSteamId, $ClientSteamId)) {
 if (-not [System.IO.Path]::IsPathRooted($OutputRoot)) { throw 'OutputRoot must be an absolute path.' }
 if ((Test-Path -LiteralPath $OutputRoot) -and -not $UseExistingStage) { throw "OutputRoot already exists; refusing to overwrite: $OutputRoot" }
 if (-not (Test-Path -LiteralPath $OutputRoot -PathType Container) -and $UseExistingStage) { throw "Existing stage was not found: $OutputRoot" }
-if ($StageOnly -and $UseExistingStage) { throw 'StageOnly cannot be combined with UseExistingStage.' }
 $outputAbsolute = [System.IO.Path]::GetFullPath($OutputRoot)
 $OutputRoot = $outputAbsolute
 $sourceAbsolute = [System.IO.Path]::GetFullPath($GameSourceRoot).TrimEnd('\') + '\'
@@ -202,7 +205,17 @@ try {
             if (-not (Test-Path -LiteralPath $path -PathType Container)) { throw "Existing stage is incomplete; missing $path" }
         }
         if (@(Get-ChildItem -LiteralPath $sharedRoot -Force -Recurse).Count -gt 0) {
-            throw 'Existing shared smoke directory is not empty; refusing to accept stale handoff or PASS files. Stage a fresh run root.'
+            $attemptStamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+            $archiveRoot = Join-Path $OutputRoot "evidence\prior-attempts\shared-$attemptStamp"
+            Assert-ContainedPath $archiveRoot $OutputRoot
+            New-Item -ItemType Directory -Path $archiveRoot -Force | Out-Null
+            Get-ChildItem -LiteralPath $sharedRoot -Force | ForEach-Object {
+                Copy-Item -LiteralPath $_.FullName -Destination $archiveRoot -Recurse -Force
+            }
+            $sharedRoot = Join-Path $OutputRoot "shared-retry-$attemptStamp"
+            Assert-ContainedPath $sharedRoot $OutputRoot
+            New-Item -ItemType Directory -Path $sharedRoot -Force | Out-Null
+            Write-Host "Archived previous shared smoke files to $archiveRoot; using a fresh shared root."
         }
         foreach ($gameRoot in @($hostRoot, $clientRoot)) {
             Require-File (Join-Path $gameRoot 'Schedule I.exe') 'Staged game executable'
@@ -211,6 +224,12 @@ try {
             Require-File (Join-Path $gameRoot ("Mods\" + (Split-Path -Leaf $SmokeDll))) 'Staged smoke assembly'
             foreach ($dependency in @('MoonSharp.Interpreter.dll', 'ManagedDoom.Core.dll', 'UsableComputer.ChildHost.dll')) {
                 Require-File (Join-Path $gameRoot "UserLibs\$dependency") "Staged UserLib $dependency"
+            }
+            Copy-Item -LiteralPath $UsableComputerDll -Destination (Join-Path $gameRoot ("Mods\" + (Split-Path -Leaf $UsableComputerDll))) -Force
+            Copy-Item -LiteralPath $S1ApiDll -Destination (Join-Path $gameRoot 'Mods\S1API.dll') -Force
+            Copy-Item -LiteralPath $SmokeDll -Destination (Join-Path $gameRoot 'Mods') -Force
+            foreach ($dependency in @('MoonSharp.Interpreter.dll', 'ManagedDoom.Core.dll', 'UsableComputer.ChildHost.dll')) {
+                Copy-Item -LiteralPath (Join-Path $UserLibsSourceDirectory $dependency) -Destination (Join-Path $gameRoot 'UserLibs') -Force
             }
         }
         $identityPairs = @(
@@ -238,10 +257,13 @@ try {
     foreach ($gameRoot in @($hostRoot, $clientRoot)) {
         $oldLatestLog = Join-Path $gameRoot 'MelonLoader\Latest.log'
         $oldLogs = Join-Path $gameRoot 'MelonLoader\Logs'
+        $oldPlayerLog = Join-Path $gameRoot 'Player.log'
         Assert-ContainedPath $oldLatestLog $OutputRoot
         Assert-ContainedPath $oldLogs $OutputRoot
+        Assert-ContainedPath $oldPlayerLog $OutputRoot
         if (Test-Path -LiteralPath $oldLatestLog) { Remove-Item -LiteralPath $oldLatestLog -Force }
         if (Test-Path -LiteralPath $oldLogs) { Remove-Item -LiteralPath $oldLogs -Recurse -Force }
+        if (Test-Path -LiteralPath $oldPlayerLog) { Remove-Item -LiteralPath $oldPlayerLog -Force }
     }
 
     if (-not $UseExistingStage) {
@@ -256,7 +278,7 @@ try {
             Copy-Item -LiteralPath $S1ApiDll -Destination (Join-Path $mods 'S1API.dll') -Force
             Copy-Item -LiteralPath $SmokeDll -Destination $mods -Force
             foreach ($dependency in @('MoonSharp.Interpreter.dll', 'ManagedDoom.Core.dll', 'UsableComputer.ChildHost.dll')) {
-                Copy-Item -LiteralPath (Join-Path (Split-Path -Parent $UsableComputerDll) $dependency) -Destination $userLibs -Force
+                Copy-Item -LiteralPath (Join-Path $UserLibsSourceDirectory $dependency) -Destination $userLibs -Force
             }
         }
     }
@@ -296,11 +318,16 @@ try {
         Write-Host 'Starting isolated host process (hidden).'
         $hostProcess = Start-Process -FilePath $hostExe -WorkingDirectory $hostRoot -ArgumentList (Join-QuotedArguments $hostArguments) -WindowStyle Hidden -PassThru
         $lobbyPath = Join-Path $sharedRoot 'lobby.txt'
+        $hostResult = Join-Path $sharedRoot 'host-result.txt'
         $joinDeadline = [DateTime]::UtcNow.AddSeconds(180)
         $lobbyId = ''
         while ([DateTime]::UtcNow -lt $joinDeadline) {
             $hostProcess.Refresh()
             if ($hostProcess.HasExited) { throw "Host process exited before lobby creation (exit=$($hostProcess.ExitCode))." }
+            if (Test-Path -LiteralPath $hostResult -PathType Leaf) {
+                $earlyResult = Get-Content -LiteralPath $hostResult -Raw
+                if ($earlyResult.StartsWith('FAIL|', [System.StringComparison]::Ordinal)) { throw "Host failed before publishing its lobby: $earlyResult" }
+            }
             if (Test-Path -LiteralPath $lobbyPath -PathType Leaf) {
                 $match = [regex]::Match((Get-Content -LiteralPath $lobbyPath -Raw), 'id=(\d+)')
                 if ($match.Success -and $match.Groups[1].Value -ne '0') { $lobbyId = $match.Groups[1].Value; break }
@@ -313,7 +340,6 @@ try {
         $clientArguments = @($clientArgumentsPrefix + @($lobbyId) + $argumentsSuffix)
         $clientProcess = Start-Process -FilePath $clientExe -WorkingDirectory $clientRoot -ArgumentList (Join-QuotedArguments $clientArguments) -WindowStyle Hidden -PassThru
 
-        $hostResult = Join-Path $sharedRoot 'host-result.txt'
         $clientResult = Join-Path $sharedRoot 'client-result.txt'
         $runDeadline = [DateTime]::UtcNow.AddSeconds($TimeoutSeconds)
         $passed = $false
@@ -352,7 +378,7 @@ try {
             $sharedEvidence = Join-Path $stagedRoot 'evidence\shared'
             New-Item -ItemType Directory -Path $sharedEvidence -Force | Out-Null
             foreach ($name in @('lobby.txt', 'manifest.txt', 'host-result.txt', 'client-result.txt')) {
-                $path = Join-Path $stagedRoot "shared\$name"
+                $path = Join-Path $sharedRoot $name
                 if (Test-Path -LiteralPath $path -PathType Leaf) { Copy-Item -LiteralPath $path -Destination $sharedEvidence -Force }
             }
         } catch { Write-Warning "Could not copy shared smoke evidence: $($_.Exception.Message)" }

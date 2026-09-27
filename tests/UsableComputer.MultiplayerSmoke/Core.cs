@@ -21,6 +21,7 @@ using S1Property = Il2CppScheduleOne.Property.Property;
 using S1ItemPair = Il2CppScheduleOne.DevUtilities.StringIntPair;
 using S1MoneyManager = Il2CppScheduleOne.Money.MoneyManager;
 using S1Lobby = Il2CppScheduleOne.Networking.Lobby;
+using S1SteamLobbyService = Il2CppScheduleOne.Networking.SteamLobbyService;
 #else
 using S1DateTime = System.DateTime;
 using S1DateTimeData = ScheduleOne.Persistence.Datas.DateTimeData;
@@ -38,6 +39,7 @@ using S1Property = ScheduleOne.Property.Property;
 using S1ItemPair = ScheduleOne.DevUtilities.StringIntPair;
 using S1MoneyManager = ScheduleOne.Money.MoneyManager;
 using S1Lobby = ScheduleOne.Networking.Lobby;
+using S1SteamLobbyService = ScheduleOne.Networking.SteamLobbyService;
 #endif
 
 [assembly: MelonInfo(typeof(UsableComputer.MultiplayerSmoke.Core), "Usable Computer Multiplayer Smoke", "1.0.0", "Bars")]
@@ -88,16 +90,15 @@ public sealed class Core : MelonMod
 
     private IEnumerator HostLobbyAndLoad()
     {
-        float deadline = Time.realtimeSinceStartup + 120f;
-        while ((S1Lobby.Instance == null || S1LoadManager.Instance == null) && Time.realtimeSinceStartup < deadline)
-            yield return null;
-        Require(S1Lobby.Instance != null, "Host lobby service did not initialize in Menu.");
+        yield return WaitUntil(() => S1LoadManager.Instance != null && GetSteamLobbyService() != null, 30,
+            "Host Steam lobby service did not initialize in Menu.");
+        if (_finished) yield break;
         S1Lobby.Instance!.CreateLobby();
         yield return WaitUntil(() => S1Lobby.Instance != null && S1Lobby.Instance.IsInLobby &&
-            S1Lobby.Instance.LobbyID != 0, 120, "Host lobby ID was not established.");
+            GetNativeLobbyId() != 0, 120, "Host Steam lobby ID was not established.");
         if (_finished) yield break;
         Require(S1Lobby.Instance!.IsHost, "Lobby creator is not host.");
-        Write("lobby", $"id={S1Lobby.Instance.LobbyID};members={S1Lobby.Instance.GetLobbyMemberIDs().Count}");
+        Write("lobby", $"id={GetNativeLobbyId()};members={S1Lobby.Instance.GetLobbyMemberIDs().Count}");
         yield return WaitUntil(() => S1Lobby.Instance != null && S1Lobby.Instance.IsInLobby &&
             S1Lobby.Instance.PlayerCount >= 2 && S1Lobby.Instance.GetLobbyMemberIDs().Count >= 2, 120,
             "A second lobby member did not join before host load.");
@@ -126,7 +127,8 @@ public sealed class Core : MelonMod
     {
         yield return WaitUntil(() => S1LoadManager.Instance != null && !S1LoadManager.Instance.IsLoading &&
             S1LoadManager.Instance.IsGameLoaded && S1LoadManager.Instance.IsInGameScene && S1Lobby.Instance != null &&
-            S1Lobby.Instance.IsInLobby && S1Lobby.Instance.PlayerCount >= 2 && S1Lobby.Instance.GetLobbyMemberIDs().Count >= 2,
+            S1Lobby.Instance.IsInLobby && S1Lobby.Instance.PlayerCount >= 2 && S1Lobby.Instance.GetLobbyMemberIDs().Count >= 2 &&
+            S1MoneyManager.Instance != null,
             180, "Gameplay or two-peer network readiness did not arrive.");
         if (_finished) yield break;
         Require(S1Lobby.Instance!.IsHost == (_role == "host"), "Lobby role disagrees with the smoke role.");
@@ -147,6 +149,10 @@ public sealed class Core : MelonMod
         float price = 0;
             yield return WaitUntil(() => S1DeliveryApp.Instance != null && S1DeliveryManager.Instance != null, 60,
                 "Native delivery services did not initialize.");
+            if (_finished) yield break;
+            yield return WaitUntil(() => File.Exists(Path.Combine(_root, "client-game-ready.txt")), 60,
+                "Client gameplay was not ready before host delivery setup.");
+            if (_finished) yield break;
             Require(SelectDealerAndCustomer(out dealerId, out customerId), "No recruited dealer with space and unlocked unassigned customer was found.");
             foreach (var candidate in S1DeliveryApp.Instance!.GetComponentsInChildren<S1DeliveryShop>(true))
             {
@@ -169,7 +175,26 @@ public sealed class Core : MelonMod
             S1DeliveryManager.Instance!.RecordDeliveryReceipt_Server(receipt);
             startingBalance = S1MoneyManager.Instance!.sync___get_value_onlineBalance();
             price = S1DeliveryApp.Instance.GetDeliveryCost(receipt);
-            Require(price > 0 && price < startingBalance, "Native quote is unaffordable or invalid.");
+            Require(price > 0 && !float.IsNaN(price) && !float.IsInfinity(price) && price < 1_000_000_000f,
+                $"Native quote invalid: price={price:R}, listing={listing.MatchingListing.Price:R}, balance={startingBalance:R}.");
+            float fundedBalance = Math.Max(startingBalance, price + 1000f);
+            if (fundedBalance > startingBalance)
+                S1MoneyManager.Instance.CreateOnlineTransaction("Multiplayer smoke fixture", fundedBalance - startingBalance,
+                    1f, "Disposable host test funds");
+            yield return WaitUntil(() => Math.Abs(S1MoneyManager.Instance!.sync___get_value_onlineBalance() - fundedBalance) < 0.02f,
+                30, $"Host fixture funding did not settle: target={fundedBalance:R}.");
+            if (_finished) yield break;
+            Write("funding", fundedBalance.ToString("R", System.Globalization.CultureInfo.InvariantCulture));
+            yield return WaitUntil(() => File.Exists(Path.Combine(_root, "client-funded.txt")), 30,
+                "Client did not observe the host's fixture funding.");
+            if (_finished) yield break;
+            float clientFundedBalance = float.Parse(File.ReadAllText(Path.Combine(_root, "client-funded.txt")),
+                System.Globalization.CultureInfo.InvariantCulture);
+            Require(Math.Abs(clientFundedBalance - fundedBalance) < 0.02f,
+                $"Client fixture funding mismatch: host={fundedBalance:R}, client={clientFundedBalance:R}.");
+            startingBalance = S1MoneyManager.Instance.sync___get_value_onlineBalance();
+            Require(startingBalance > price,
+                $"Native quote remains unaffordable after funding: price={price:R}, balance={startingBalance:R}.");
             Write("manifest", $"dealer={dealerId}\ncustomer={customerId}\nreceipt={receipt.DeliveryID}\nstore={receipt.StoreName}\ndestination={receipt.DestinationCode}\ndock={receipt.LoadingDockIndex}\nitem={listing.MatchingListing.Item.ID}\nprice={price:R}\nbalance={startingBalance:R}");
             yield return WaitUntil(() => File.Exists(Path.Combine(_root, "client-assigned.txt")), 60, "Client did not request dealer assignment.");
             yield return WaitUntil(() => CustomerAssigned(dealerId, customerId), 30, "Client dealer assignment did not replicate to host.");
@@ -191,20 +216,37 @@ public sealed class Core : MelonMod
 
     private IEnumerator RunClientScenario()
     {
+        yield return WaitUntil(() => File.Exists(Path.Combine(_root, "funding.txt")), 60,
+            "Host fixture funding target did not arrive.");
+        if (_finished) yield break;
+        float fundedBalance = float.Parse(File.ReadAllText(Path.Combine(_root, "funding.txt")),
+            System.Globalization.CultureInfo.InvariantCulture);
+        yield return WaitUntil(() => S1MoneyManager.Instance != null &&
+            Math.Abs(S1MoneyManager.Instance.sync___get_value_onlineBalance() - fundedBalance) < 0.02f,
+            30, $"Client did not receive host fixture funding: target={fundedBalance:R}.");
+        if (_finished) yield break;
+        Write("client-funded", S1MoneyManager.Instance!.sync___get_value_onlineBalance()
+            .ToString("R", System.Globalization.CultureInfo.InvariantCulture));
         yield return WaitUntil(() => File.Exists(Path.Combine(_root, "manifest.txt")), 60, "Host feature manifest did not arrive.");
         if (_finished) yield break;
             Dictionary<string, string> manifest = ReadManifest();
             object dealers = CreateAdapter("UsableComputer.Native.DealersNativeAdapter");
+            RefreshAdapter(dealers, 3, "Dealer");
             Require(InvokeBool(dealers, "TryChangeCustomer", manifest["dealer"], manifest["customer"], true), "Client adapter rejected dealer assignment.");
             Write("client-assigned", "requested=true");
             yield return WaitUntil(() => File.Exists(Path.Combine(_root, "host-assigned.txt")), 30, "Host did not observe dealer assignment.");
             yield return WaitUntil(() => CustomerAssigned(manifest["dealer"], manifest["customer"]), 30, "Client did not observe replicated dealer assignment.");
+            if (_finished) yield break;
+            RefreshAdapter(dealers, 3, "Dealer");
             Require(InvokeBool(dealers, "TryChangeCustomer", manifest["dealer"], manifest["customer"], false), "Client adapter rejected dealer removal.");
             Write("client-removed", "requested=true");
             yield return WaitUntil(() => File.Exists(Path.Combine(_root, "host-removed.txt")), 30, "Host did not observe dealer removal.");
             yield return WaitUntil(() => CustomerUnassigned(manifest["customer"]), 30, "Client did not observe replicated dealer removal.");
+            if (_finished) yield break;
+            RefreshAdapter(dealers, 3, "Dealer");
 
             object deliveries = CreateAdapter("UsableComputer.Native.DeliveriesNativeAdapter");
+            RefreshAdapter(deliveries, 2, "Delivery");
             object?[] quoteArgs = { manifest["receipt"], 0m, string.Empty };
             bool quoteOk = (bool)(Method(deliveries, "TryQuote", 3).Invoke(deliveries, quoteArgs) ?? false);
             decimal quote = (decimal)quoteArgs[1]!;
@@ -214,7 +256,9 @@ public sealed class Core : MelonMod
             object?[] reorderArgs = { manifest["receipt"], quote, string.Empty };
             Require((bool)(Method(deliveries, "TryReorder", 3).Invoke(deliveries, reorderArgs) ?? false), "Client adapter rejected native reorder.");
             Write("client-reordered", "requested=true");
-            yield return WaitUntil(() => HasReceiptDelivery(manifest["receipt"]), 45, "Client did not observe the native active delivery.");
+            yield return WaitUntil(() => HasReorderedDelivery(manifest), 45, "Client did not observe the native active delivery.");
+            if (_finished) yield break;
+            RefreshAdapter(deliveries, 2, "Delivery");
             float expected = float.Parse(manifest["balance"], System.Globalization.CultureInfo.InvariantCulture) - (float)quote;
             yield return WaitUntil(() => Math.Abs(S1MoneyManager.Instance!.sync___get_value_onlineBalance() - expected) < 0.02f,
                 30, "Client did not observe the single delivery charge.");
@@ -262,11 +306,40 @@ public sealed class Core : MelonMod
     }
 
     private static bool HasActiveDelivery(S1DeliveryShop shop) => S1DeliveryManager.Instance!.GetActiveShopDelivery(shop) != null;
-    private static bool HasReceiptDelivery(string receiptId)
+    private static bool HasReorderedDelivery(Dictionary<string, string> manifest)
     {
-        foreach (var delivery in S1DeliveryManager.Instance!.Deliveries)
-            if (delivery?.DeliveryID == receiptId) return true;
-        return false;
+        S1DeliveryShop shop = S1DeliveryApp.Instance!.GetShop(manifest["store"]);
+        if (shop == null) return false;
+        var delivery = S1DeliveryManager.Instance!.GetActiveShopDelivery(shop);
+        if (delivery == null || delivery.StoreName != manifest["store"] ||
+            delivery.DestinationCode != manifest["destination"] ||
+            delivery.LoadingDockIndex != int.Parse(manifest["dock"], System.Globalization.CultureInfo.InvariantCulture) ||
+            delivery.Items.Length != 1) return false;
+        return delivery.Items[0].String == manifest["item"] && delivery.Items[0].Int == 1;
+    }
+
+    private static S1SteamLobbyService? GetSteamLobbyService()
+    {
+        S1Lobby? lobby = S1Lobby.Instance;
+        if (lobby == null) return null;
+#if IL2CPP
+        return lobby._lobbyService?.TryCast<S1SteamLobbyService>();
+#else
+        return typeof(S1Lobby).GetField("_lobbyService", BindingFlags.Instance | BindingFlags.NonPublic)?
+            .GetValue(lobby) as S1SteamLobbyService;
+#endif
+    }
+
+    private static ulong GetNativeLobbyId()
+    {
+        S1SteamLobbyService? service = GetSteamLobbyService();
+        if (service == null) return 0;
+#if IL2CPP
+        return service._lobbyID;
+#else
+        return (ulong?)typeof(S1SteamLobbyService).GetProperty("_lobbyID", BindingFlags.Instance | BindingFlags.NonPublic)?
+            .GetValue(service) ?? 0;
+#endif
     }
 
     private static object CreateAdapter(string typeName)
@@ -282,6 +355,14 @@ public sealed class Core : MelonMod
         bool result = (bool)(Method(target, name, invokeArgs.Length).Invoke(target, invokeArgs) ?? false);
         if (!result) throw new InvalidOperationException($"{name} rejected: {invokeArgs[^1]}");
         return true;
+    }
+
+    private static void RefreshAdapter(object target, int parameterCount, string label)
+    {
+        object?[] args = parameterCount == 3 ? new object?[] { null, null, string.Empty }
+            : new object?[] { null, string.Empty };
+        bool read = (bool)(Method(target, "TryRead", parameterCount).Invoke(target, args) ?? false);
+        Require(read, $"{label} adapter refresh failed: {args[^1]}");
     }
 
     private static MethodInfo Method(object target, string name, int parameterCount) => target.GetType()
